@@ -7,6 +7,21 @@ interface GradeHistogramProps {
   title: string
 }
 
+// Custom tooltip component for Recharts
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="rounded-lg border bg-background p-2 shadow-md">
+        <p className="font-medium">{`Grade ${label}`}</p>
+        <p className="text-sm">
+          <span className="font-medium">{payload[0].value}</span> students
+        </p>
+      </div>
+    )
+  }
+  return null
+}
+
 export function GradeHistogram({ data, title }: GradeHistogramProps) {
   // Handle empty data
   if (!data || data.length === 0) {
@@ -45,7 +60,7 @@ export function GradeHistogram({ data, title }: GradeHistogramProps) {
             label={{ value: "Grade", position: "insideBottom", offset: -5 }}
           />
           <YAxis tick={{ fontSize: 12 }} label={{ value: "Students", angle: -90, position: "insideLeft" }} />
-          <Tooltip formatter={(value) => [value, "Students"]} labelFormatter={(label) => `Grade ${label}`} />
+          <Tooltip content={<CustomTooltip />} />
           <Bar dataKey="count" fill="#3b82f6" />
         </BarChart>
       </ResponsiveContainer>

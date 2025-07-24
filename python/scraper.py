@@ -123,7 +123,7 @@ def get_data(year):
 
 
 
-get_data(2023)
+get_data(2025)
 end_time = time.time()
 
 print(f"Execution took {end_time - start_time:.4f} seconds")

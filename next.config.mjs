@@ -1,6 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: "export",  
+  output: 'export',
+  trailingSlash: true,
+  skipTrailingSlashRedirect: true,
+  distDir: 'out',
+  basePath: process.env.NODE_ENV === 'production' ? '/Note-EN' : '',
+  assetPrefix: process.env.NODE_ENV === 'production' ? '/Note-EN/' : '',
   eslint: {
     ignoreDuringBuilds: true,
   },

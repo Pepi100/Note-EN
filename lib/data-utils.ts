@@ -15,11 +15,19 @@ export interface StudentData {
   [key: string]: any
 }
 
+// Get the base path for assets
+const getBasePath = () => {
+  return process.env.NODE_ENV === "production" ? "/Note-EN" : ""
+}
+
 export async function parseCSV(filePath: string): Promise<StudentData[]> {
   try {
-    const response = await fetch(filePath)
+    const basePath = getBasePath()
+    const fullPath = `${basePath}${filePath}`
+
+    const response = await fetch(fullPath)
     if (!response.ok) {
-      throw new Error(`Failed to fetch ${filePath}: ${response.statusText}`)
+      throw new Error(`Failed to fetch ${fullPath}: ${response.statusText}`)
     }
 
     const csvText = await response.text()

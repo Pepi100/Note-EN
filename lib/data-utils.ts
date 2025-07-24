@@ -1,4 +1,5 @@
 import Papa from "papaparse"
+import { getAssetPath } from "./path-utils"
 
 export interface StudentData {
   Judet: string
@@ -15,22 +16,28 @@ export interface StudentData {
   [key: string]: any
 }
 
-// Get the base path for assets
-const getBasePath = () => {
-  return process.env.NODE_ENV === "production" ? "/Note-EN" : ""
-}
-
 export async function parseCSV(filePath: string): Promise<StudentData[]> {
   try {
-    const basePath = getBasePath()
-    const fullPath = `${basePath}${filePath}`
+    const fullPath = getAssetPath(filePath)
+    console.log(`Attempting to fetch: ${fullPath}`)
 
-    const response = await fetch(fullPath)
+    const response = await fetch(fullPath, {
+      headers: {
+        Accept: "text/csv,text/plain,*/*",
+      },
+    })
+
     if (!response.ok) {
-      throw new Error(`Failed to fetch ${fullPath}: ${response.statusText}`)
+      console.error(`Failed to fetch ${fullPath}: ${response.status} ${response.statusText}`)
+      throw new Error(`Failed to fetch ${fullPath}: ${response.status} ${response.statusText}`)
     }
 
     const csvText = await response.text()
+    console.log(`CSV text length: ${csvText.length}`)
+
+    if (csvText.length === 0) {
+      throw new Error(`CSV file ${filePath} is empty`)
+    }
 
     return new Promise((resolve, reject) => {
       Papa.parse(csvText, {
@@ -49,20 +56,24 @@ export async function parseCSV(filePath: string): Promise<StudentData[]> {
           if (results.errors.length > 0) {
             console.warn("CSV parsing warnings:", results.errors)
           }
+          console.log(`Parsed ${results.data.length} rows`)
           resolve(results.data || [])
         },
         error: (error: Error) => {
+          console.error("CSV parsing error:", error)
           reject(error)
         },
       })
     })
   } catch (error) {
     console.error(`Error parsing CSV ${filePath}:`, error)
-    return []
+    throw error
   }
 }
 
 export function calculateYearStats(data: StudentData[]) {
+  console.log(`Calculating stats for ${data.length} students`)
+
   if (!data || data.length === 0) {
     return {
       totalStudents: 0,
@@ -84,12 +95,15 @@ export function calculateYearStats(data: StudentData[]) {
 
   const absenteePercentage = totalStudents > 0 ? (absenteeCount / totalStudents) * 100 : 0
 
-  return {
+  const stats = {
     totalStudents,
     averageFinalGrade,
     absenteeCount,
     absenteePercentage,
   }
+
+  console.log("Calculated stats:", stats)
+  return stats
 }
 
 export function calculateDetailedStats(data: StudentData[]) {

@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { parseCSV, calculateYearStats } from "@/lib/data-utils"
+import { getBasePath } from "@/lib/path-utils" // Import getBasePath for Link href
 
 interface YearStats {
   totalStudents: number
@@ -19,6 +20,7 @@ export default function OverviewPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [debugInfo, setDebugInfo] = useState<any[]>([])
+  const basePath = getBasePath() // Get the base path for Link href
 
   useEffect(() => {
     const loadAllYearStats = async () => {
@@ -36,6 +38,7 @@ export default function OverviewPage() {
           baseURL: window.location.origin,
           pathname: window.location.pathname,
           environment: process.env.NODE_ENV,
+          basePathConfig: basePath,
         })
 
         for (const year of years) {
@@ -73,7 +76,7 @@ export default function OverviewPage() {
     }
 
     loadAllYearStats()
-  }, [])
+  }, [basePath]) // Depend on basePath to re-run if it changes (though it's static)
 
   if (loading) {
     return (
@@ -163,7 +166,8 @@ export default function OverviewPage() {
                   </span>
                 </div>
               </div>
-              <Link href={`/${year}`}>
+              {/* Use getAssetPath for Link href to ensure correct base path */}
+              <Link href={basePath + `/${year}`}>
                 <Button className="w-full">View Detailed Analysis</Button>
               </Link>
             </CardContent>

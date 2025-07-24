@@ -1,5 +1,5 @@
 import Papa from "papaparse"
-import { getAssetPath } from "./path-utils"
+import { getAssetPath } from "./path-utils" // Ensure this is the only source for asset paths
 
 export interface StudentData {
   Judet: string
@@ -18,6 +18,7 @@ export interface StudentData {
 
 export async function parseCSV(filePath: string): Promise<StudentData[]> {
   try {
+    // Use getAssetPath from path-utils.ts to ensure correct base path handling
     const fullPath = getAssetPath(filePath)
     console.log(`Attempting to fetch: ${fullPath}`)
 

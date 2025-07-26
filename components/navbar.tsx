@@ -1,18 +1,19 @@
-"use client";
+"use client"
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { cn } from "@/lib/utils";
+import Link from "next/link"
+import { usePathname } from "next/navigation"
+import { cn } from "@/lib/utils"
+import { ThemeToggle } from "./theme-toggle" // Import ThemeToggle
 
 export function Navbar() {
-  const pathname = usePathname();
+  const pathname = usePathname()
 
   const links = [
     { href: "/", label: "Overview" },
     { href: "/2023", label: "2023" },
     { href: "/2024", label: "2024" },
     { href: "/2025", label: "2025" },
-  ];
+  ]
 
   return (
     <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -30,17 +31,16 @@ export function Navbar() {
                 href={link.href}
                 className={cn(
                   "text-sm font-medium transition-colors hover:text-primary",
-                  pathname === link.href
-                    ? "text-primary"
-                    : "text-muted-foreground"
+                  pathname === link.href ? "text-primary" : "text-muted-foreground",
                 )}
               >
                 {link.label}
               </Link>
             ))}
+            <ThemeToggle /> {/* Add the ThemeToggle component here */}
           </div>
         </div>
       </div>
     </nav>
-  );
+  )
 }

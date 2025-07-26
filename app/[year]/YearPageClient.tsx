@@ -13,7 +13,7 @@ interface DetailedStats {
   absentStats: {
     romanian: { count: number; percentage: number }
     mathematics: { count: number; percentage: number }
-    nativeLanguage: { count: number; percentage: number }
+    nativeLanguage: { count: number; percentage: number; totalTaking: number } // Added totalTaking
   }
   gradeAverages: {
     romanian: number
@@ -217,6 +217,11 @@ export default function YearPageClient({ year }: YearPageClientProps) {
               <div className="text-sm text-muted-foreground">
                 {stats.absentStats.nativeLanguage.percentage.toFixed(1)}% absent
               </div>
+              {stats.absentStats.nativeLanguage.totalTaking > 0 && (
+                <div className="text-xs text-muted-foreground">
+                  (out of {stats.absentStats.nativeLanguage.totalTaking} students)
+                </div>
+              )}
             </div>
           </div>
         </CardContent>

@@ -1,6 +1,55 @@
 import Papa from "papaparse"
 import { getAssetPath } from "./path-utils"
 
+
+
+const judete = {
+  "ALBA": "AB",
+  "ARAD": "AR",
+  "ARGES": "AG",
+  "BACAU": "BC",
+  "BIHOR": "BH",
+  "BISTRITA-NASAUD": "BN",
+  "BOTOSANI": "BT",
+  "BRAILA": "BR",
+  "BRASOV": "BV",
+  "BUZAU": "BZ",
+  "CALARASI": "CL",
+  "CARAS-SEVERIN": "CS",
+  "CLUJ": "CJ",
+  "CONSTANTA": "CT",
+  "COVASNA": "CV",
+  "DAMBOVITA": "DB",
+  "DOLJ": "DJ",
+  "GALATI": "GL",
+  "GIURGIU": "GR",
+  "GORJ": "GJ",
+  "HARGHITA": "HR",
+  "HUNEDOARA": "HD",
+  "IALOMITA": "IL",
+  "IASI": "IS",
+  "ILFOV": "IF",
+  "MARAMURES": "MM",
+  "MEHEDINTI": "MH",
+  "MURES": "MS",
+  "NEAMT": "NT",
+  "OLT": "OT",
+  "PRAHOVA": "PH",
+  "SALAJ": "SJ",
+  "SATU MARE": "SM",
+  "SIBIU": "SB",
+  "SUCEAVA": "SV",
+  "TELEORMAN": "TR",
+  "TIMIS": "TM",
+  "TULCEA": "TL",
+  "VALCEA": "VL",
+  "VASLUI": "VS",
+  "VRANCEA": "VN",
+  "BUCURESTI": "B"
+};
+
+
+
 export interface StudentData {
   Judet: string
   ID_candidat: string

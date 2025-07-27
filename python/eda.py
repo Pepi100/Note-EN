@@ -3,10 +3,60 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 import math
+import unicodedata
+import pdfplumber
+
+def append_a_to_b(path_a: str, path_b: str, output_path: str):
+    # Load CSVs
+    df_a = pd.read_csv(path_a)
+    df_b = pd.read_csv(path_b)
+
+    existing_cod = set(df_b['Cod'].astype(str))  # existing CODs in B as strings
+    max_nr = df_b['Nr'].max()
+    if pd.isna(max_nr):
+        max_nr = 0
+    next_nr = max_nr + 1
+
+    new_rows = []
+
+    for _, row in df_a.iterrows():
+        cod = str(row["Cod SIIIR"])
+        if cod not in existing_cod:
+            new_row = {
+                "Nr": next_nr,
+                "Cod": cod,
+                "Denumire": row["Denumire"],
+                "Denumire scurta": row["Denumire scurtă"],
+                "Localitate": row["Localitate"],
+                "Localitate superioara": row["Localitate superioară"],
+                "Judet": row["Judet"],
+                "Statut": row["Statut"],
+                "Tip unitate": row["Tip unitate"],
+                "Forma de proprietate": row["Formă de proprietate"]
+            }
+            new_rows.append(new_row)
+            existing_cod.add(cod)  # prevent duplicates in the same run
+            next_nr += 1
+
+    df_new = pd.DataFrame(new_rows)
+    df_result = pd.concat([df_b, df_new], ignore_index=True)
+
+    df_result.to_csv(output_path, index=False)
+    print(f"Appended {len(new_rows)} unique rows from A to B and saved to {output_path}")
 
 
 
-judete = {
+
+
+
+def remove_diacritics(text: str) -> str:
+    return "".join(
+        c for c in unicodedata.normalize("NFD", text)
+        if unicodedata.category(c) != "Mn"
+    )
+
+
+judete_long_short = {
     "ALBA": "AB",
     "ARAD": "AR",
     "ARGES": "AG",
@@ -49,31 +99,96 @@ judete = {
     "VASLUI": "VS",
     "VRANCEA": "VN",
     "BUCURESTI": "B",
-    "MUNICIPIULBUCURESTI": "B"
+    "MUNICIPIULBUCURESTI": "B",
+    "X":"X"
 }
 
-# create SIIR CSV
 
-def create_SIIR():
-    pass
+judete_short_long = {
+    "AB": "ALBA",
+    "AR": "ARAD",
+    "AG": "ARGES",
+    "BC": "BACAU",
+    "BH": "BIHOR",
+    "BN": "BISTRITA NASAUD",
+    "BT": "BOTOSANI",
+    "BR": "BRAILA",
+    "BV": "BRASOV",
+    "BZ": "BUZAU",
+    "CL": "CALARASI",
+    "CS": "CARAS SEVERIN",
+    "CJ": "CLUJ",
+    "CT": "CONSTANTA",
+    "CV": "COVASNA",
+    "DB": "DAMBOVITA",
+    "DJ": "DOLJ",
+    "GL": "GALATI",
+    "GR": "GIURGIU",
+    "GJ": "GORJ",
+    "HR": "HARGHITA",
+    "HD": "HUNEDOARA",
+    "IL": "IALOMITA",
+    "IS": "IASI",
+    "IF": "ILFOV",
+    "MM": "MARAMURES",
+    "MH": "MEHEDINTI",
+    "MS": "MURES",
+    "NT": "NEAMT",
+    "OT": "OLT",
+    "PH": "PRAHOVA",
+    "SJ": "SALAJ",
+    "SM": "SATU MARE",
+    "SB": "SIBIU",
+    "SV": "SUCEAVA",
+    "TR": "TELEORMAN",
+    "TM": "TIMIS",
+    "TL": "TULCEA",
+    "VL": "VALCEA",
+    "VS": "VASLUI",
+    "VN": "VRANCEA",
+    "B": "BUCURESTI",
+    "X":"X"
+}
+
+# SIIR
+siir_DF = pd.read_csv(r"csv\CODURI SIIIR.csv")
+unknown = []
+
+def SIIR_to_judet(code):
+    global unknown
+
+    if code in unknown:
+        return "X"
+
+    try:
+        row = siir_DF[siir_DF["Cod"] == code].iloc[0]
+    except Exception as e:
+        try:
+            val = int(str(code)[3:])
+            dg = int(str(code)[4])
+            if dg == 2:
+               row = siir_DF[siir_DF["Cod"] == code - 1000000].iloc[0]
+            else:
+                row = siir_DF[siir_DF["Cod"] == code + 1000000].iloc[0]
+        except Exception as e:
+            print(f"Codul {code} nu a fost gasit!")
+            unknown += [code]
+            return "X"
+
+    return remove_diacritics(row["Judet"])
 
 
 def xlsx_to_csv(input_path: str, output_path: str = None):
-    """
-    Converts an XLSX file to CSV.
-    
-    Parameters:
-        input_path (str): Path to the input .xlsx file.
-        output_path (str, optional): Path to save the output .csv file.
-                                     If None, saves in the same location 
-                                     with .csv extension.
-    """
+
     if output_path is None:
         base, _ = os.path.splitext(input_path)
         output_path = base + ".csv"
 
     # Read and convert
     df = pd.read_excel(input_path)
+    print("Read Excel")
+    df.columns = df.columns.str.strip()
+
     df.to_csv(output_path, index=False)
     print(f"Converted: {input_path} -> {output_path}")
 
@@ -120,6 +235,11 @@ def transform_exam_csv(input_path: str, output_path: str = None, p: float = 0):
 
     # Load CSV
     df = pd.read_csv(input_path)
+    df.columns = df.columns.str.strip()
+
+    # check judet
+    if "JUDET" not in df.columns:
+        df["JUDET"] = df.apply(lambda row: SIIR_to_judet(row["COD SIIIR"]), axis=1)
 
     # --- Rename columns to match requested format ---
     rename_map = {
@@ -127,32 +247,44 @@ def transform_exam_csv(input_path: str, output_path: str = None, p: float = 0):
         "SEX": "Sex",
         "MEDIU": "Mediu",
         "STATUS LIMBA MATERNA": "Lb_mat",
+
         "NOTA ROMANA": "Nota_ro",
-        "CONTESTATIE ROMANA": "Contestatie_ro",
-        "NOTA FINALA ROMANA": "Nota_finala_ro",
+        "NOTA CONTESTATIE ROMANA": "Con_ro",
+        "NOTA FINALA ROMANA": "Fin_ro",
+
         "NOTA MATEMATICA": "Nota_mate",
-        "CONTESTATIE MATEMATICA": "Con_mate",
+        "NOTA CONTESTATIE MATEMATICA": "Con_mate",
         "NOTA FINALA MATEMATICA": "Fin_mate",
+
         "NOTA LIMBA MATERNA": "Nota_lm",
-        "CONTESTATIE LIMBA MATERNA": "Con_lm",
+        "NOTA CONTESTATIE LIMBA MATERNA": "Con_lm",
         "NOTA FINALA LB MATERNA": "Fin_lm",
+
         "MEDIA": "Medie_en",
         "MEDIA V-VIII": "Medie_5-8",
         "JUDET": "Judet"
     }
     df = df.rename(columns=rename_map)
 
+    # fix lb mat
+    df["Lb_mat"] = df["Lb_mat"].apply(lambda x: "DA" if x == "ABSENT" or x == "PREZENT" else "-" )
+
     # Abreviere
-    df["Judet"] = df["Judet"].apply(lambda x: judete[x.upper().replace("-", "").replace(" ", "")])
+    df["Judet"] = df["Judet"].apply(lambda x: judete_long_short[x.upper().replace("-", "").replace(" ", "")])
 
     # medie admitere:
-    df["Admitere"] = df.apply(
-        lambda row: (
-            "-" if row["Medie_en"] == "-" or row["Medie_5-8"] == "-"
-            else math.floor( round(float(row["Medie_en"]) * (1 - p) + float(row["Medie_5-8"]) * p, 10) * 100) / 100
-        ),
-        axis=1
-    )
+    def calculate_admitere(row, p):
+        try:
+            if row["Medie_en"] == "-" or row["Medie_5-8"] == "-":
+                return "-"
+            return math.floor(
+                round(float(row["Medie_en"]) * (1 - p) + float(row["Medie_5-8"]) * p, 10) * 100
+            ) / 100
+        except Exception as e:
+            print("Error row:", row)
+            return "-"
+
+    df["Admitere"] = df.apply(lambda row: calculate_admitere(row, p), axis=1)
     
 
 
@@ -175,5 +307,33 @@ def transform_exam_csv(input_path: str, output_path: str = None, p: float = 0):
     print(f"Transformed CSV saved to: {output_path}")
 
 
-xlsx_to_csv(r"csv\2021.xls")
-# transform_exam_csv(r"csv\2021.csv", r"public\2021.csv", 0.2)
+def fix_coduri():
+    siir_DF = pd.read_csv(r"csv\CODURI SIIIR.csv")
+    siir_DF["Judet"] = siir_DF["Judet"].apply(lambda x: x if len(x) > 2 else judete_short_long[x])
+    siir_DF.to_csv(r"csv\CODURI SIIIR.csv", index=False)
+
+# fix_coduri()
+# append_a_to_b(r"csv\datedeschise-retea-2019-2020.csv", r"csv\CODURI SIIIR.csv", r"csv\CODURI SIIIR.csv")
+
+
+# xlsx_to_csv(r"csv\2017.ods")
+
+# input_path = r"csv\2016.csv"
+# output_path = r"csv\2016.csv"
+
+# with open(input_path, "r", encoding="utf-8") as f:
+#     text = f.read()
+
+# # Replace all commas with dots (for decimals)
+# text = text.replace(",", ".")
+
+# # Replace all semicolons with commas (to fix separator)
+# text = text.replace(";", ",")
+
+# with open(output_path, "w", encoding="utf-8") as f:
+#     f.write(text)
+
+clean_csv(r"csv\2016.csv")
+transform_exam_csv(r"csv\2016.csv", r"public\2016.csv", 0.2)
+print(unknown)
+print(len(unknown))

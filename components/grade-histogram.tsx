@@ -33,7 +33,7 @@ export function GradeHistogram({ data, title }: GradeHistogramProps) {
   }
 
   // Define grade intervals (bins)
-  const bins = []
+  const bins: any[] | undefined = []
   for (let i = 1; i <= 9; i++) {
     // X.00 to X.49
     bins.push({

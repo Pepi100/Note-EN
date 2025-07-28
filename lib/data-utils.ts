@@ -93,6 +93,7 @@ export async function parseCSV(filePath: string): Promise<StudentData[]> {
   }
 }
 
+// This function is for the simplified stats on the overview page (old behavior)
 export function calculateYearStats(data: StudentData[]) {
   console.log(`Calculating stats for ${data.length} students`)
 
@@ -127,6 +128,108 @@ export function calculateYearStats(data: StudentData[]) {
 
   console.log("Calculated stats:", stats)
   return stats
+}
+
+// New interface for metrics needed on the overview page charts
+export interface OverviewYearMetric {
+  year: string
+  totalStudents: number
+  averageFinalGrade: number
+  averageRomanian: number
+  averageMathematics: number
+  perfect10sTotal: number
+  perfect10sRomanian: number
+  perfect10sMathematics: number
+  totalContestations: number
+  totalAbsentees: number
+}
+
+// New function to get detailed metrics for overview charts
+export function getOverviewYearMetrics(data: StudentData[], year: string): OverviewYearMetric {
+  if (!data || data.length === 0) {
+    return {
+      year,
+      totalStudents: 0,
+      averageFinalGrade: 0,
+      averageRomanian: 0,
+      averageMathematics: 0,
+      perfect10sTotal: 0,
+      perfect10sRomanian: 0,
+      perfect10sMathematics: 0,
+      totalContestations: 0,
+      totalAbsentees: 0,
+    }
+  }
+
+  const totalStudents = data.length
+
+  // Averages
+  const validFinalGrades = data.filter((student) => typeof student.Medie_en === "number" && student.Medie_en > 0)
+  const validRomanianGrades = data.filter((student) => typeof student.Fin_ro === "number" && student.Fin_ro > 0)
+  const validMathGrades = data.filter((student) => typeof student.Fin_mate === "number" && student.Fin_mate > 0)
+
+  const averageFinalGrade =
+    validFinalGrades.length > 0
+      ? validFinalGrades.reduce((sum, student) => sum + student.Medie_en, 0) / validFinalGrades.length
+      : 0
+  const averageRomanian =
+    validRomanianGrades.length > 0
+      ? validRomanianGrades.reduce((sum, student) => sum + (student.Fin_ro as number), 0) / validRomanianGrades.length
+      : 0
+  const averageMathematics =
+    validMathGrades.length > 0
+      ? validMathGrades.reduce((sum, student) => sum + (student.Fin_mate as number), 0) / validMathGrades.length
+      : 0
+
+  // Perfect 10s
+  const perfect10sTotal = data.filter(
+    (student) => typeof student.Medie_en === "number" && student.Medie_en === 10,
+  ).length
+  const perfect10sRomanian = data.filter(
+    (student) => typeof student.Fin_ro === "number" && student.Fin_ro === 10,
+  ).length
+  const perfect10sMathematics = data.filter(
+    (student) => typeof student.Fin_mate === "number" && student.Fin_mate === 10,
+  ).length
+
+  // Contestations
+  let totalContestations = 0
+  data.forEach((student) => {
+    if (student.Con_ro !== "-" && student.Con_ro !== "" && student.Con_ro != null) {
+      totalContestations++
+    }
+    if (student.Con_mate !== "-" && student.Con_mate !== "" && student.Con_mate != null) {
+      totalContestations++
+    }
+    if (student.Con_lm !== "-" && student.Con_lm !== "" && student.Con_lm != null) {
+      totalContestations++
+    }
+  })
+
+  // Absentees (reusing logic from calculateDetailedStats)
+  let totalAbsenteesAnySubject = 0
+  data.forEach((student) => {
+    const isAbsentRomanian = student.Fin_ro === "-"
+    const isAbsentMathematics = student.Fin_mate === "-"
+    const isAbsentNativeLanguage = student.Fin_lm === "-" && student.Lb_mat !== "-" // Only count if they had to take it
+
+    if (isAbsentRomanian || isAbsentMathematics || isAbsentNativeLanguage) {
+      totalAbsenteesAnySubject++
+    }
+  })
+
+  return {
+    year,
+    totalStudents,
+    averageFinalGrade,
+    averageRomanian,
+    averageMathematics,
+    perfect10sTotal,
+    perfect10sRomanian,
+    perfect10sMathematics,
+    totalContestations,
+    totalAbsentees: totalAbsenteesAnySubject,
+  }
 }
 
 export function calculateDetailedStats(data: StudentData[]) {
@@ -208,51 +311,57 @@ export function calculateDetailedStats(data: StudentData[]) {
     }
   })
 
-  // Calculate contestations based on new logic
+  // Calculate contestations based on new logic - count any non-"-" value
   let totalContestations = 0
   let increasedContestations = 0
   let decreasedContestations = 0
 
   data.forEach((student) => {
-    // Romanian Contestations
-    if (student.Con_ro !== "-") {
+    // Romanian Contestations - count if Con_ro is not "-"
+    if (student.Con_ro !== "-" && student.Con_ro !== "" && student.Con_ro != null) {
       totalContestations++
-      // Ensure grades are numbers before comparison
+      // Only compare grades if both initial and final are valid numbers
       const initialRo = typeof student.Nota_ro === "number" ? student.Nota_ro : 0
       const finalRo = typeof student.Fin_ro === "number" ? student.Fin_ro : 0
 
-      if (finalRo > initialRo) {
-        increasedContestations++
-      } else if (finalRo < initialRo) {
-        decreasedContestations++
+      if (finalRo > 0 && initialRo > 0) {
+        if (finalRo > initialRo) {
+          increasedContestations++
+        } else if (finalRo < initialRo) {
+          decreasedContestations++
+        }
       }
     }
 
-    // Mathematics Contestations
-    if (student.Con_mate !== "-") {
+    // Mathematics Contestations - count if Con_mate is not "-"
+    if (student.Con_mate !== "-" && student.Con_mate !== "" && student.Con_mate != null) {
       totalContestations++
-      // Ensure grades are numbers before comparison
+      // Only compare grades if both initial and final are valid numbers
       const initialMate = typeof student.Nota_mate === "number" ? student.Nota_mate : 0
       const finalMate = typeof student.Fin_mate === "number" ? student.Fin_mate : 0
 
-      if (finalMate > initialMate) {
-        increasedContestations++
-      } else if (finalMate < initialMate) {
-        decreasedContestations++
+      if (finalMate > 0 && initialMate > 0) {
+        if (finalMate > initialMate) {
+          increasedContestations++
+        } else if (finalMate < initialMate) {
+          decreasedContestations++
+        }
       }
     }
 
-    // Native Language Contestations
-    if (student.Con_lm !== "-") {
+    // Native Language Contestations - count if Con_lm is not "-"
+    if (student.Con_lm !== "-" && student.Con_lm !== "" && student.Con_lm != null) {
       totalContestations++
-      // Ensure grades are numbers before comparison
+      // Only compare grades if both initial and final are valid numbers
       const initialLm = typeof student.Nota_lm === "number" ? student.Nota_lm : 0
       const finalLm = typeof student.Fin_lm === "number" ? student.Fin_lm : 0
 
-      if (finalLm > initialLm) {
-        increasedContestations++
-      } else if (finalLm < initialLm) {
-        decreasedContestations++
+      if (finalLm > 0 && initialLm > 0) {
+        if (finalLm > initialLm) {
+          increasedContestations++
+        } else if (finalLm < initialLm) {
+          decreasedContestations++
+        }
       }
     }
   })

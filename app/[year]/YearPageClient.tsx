@@ -6,6 +6,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { parseCSV, type StudentData, calculateDetailedStats, getUniqueCounties } from "@/lib/data-utils"
 import { GradeHistogram } from "@/components/grade-histogram"
+import { RomaniaMap } from "@/components/romania-map"
+import { Button } from "@/components/ui/button"
 
 interface DetailedStats {
   totalStudents: number
@@ -31,7 +33,7 @@ interface DetailedStats {
     mathematicsGrades: number[]
     nativeLanguageGrades: number[]
   }
-  totalAbsenteesAnySubject: number // New property
+  totalAbsenteesAnySubject: number
 }
 
 interface YearPageClientProps {
@@ -88,6 +90,10 @@ export default function YearPageClient({ year }: YearPageClientProps) {
     }
   }, [data, selectedCounty])
 
+  const handleCountySelect = (county: string) => {
+    setSelectedCounty(county)
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -121,28 +127,70 @@ export default function YearPageClient({ year }: YearPageClientProps) {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-4xl font-bold tracking-tight">Statistici {year}</h1>
-          <p className="text-muted-foreground mt-2">Analiză detaliată a performanței studenților</p>
-        </div>
-        {counties.length > 0 && (
-          <div className="w-full sm:w-64">
-            <Select value={selectedCounty} onValueChange={setSelectedCounty}>
-              <SelectTrigger>
-                <SelectValue placeholder="Filtrați după județ" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Toate Județele</SelectItem>
-                {counties.map((county) => (
-                  <SelectItem key={county} value={county}>
-                    {county}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
+      <div className="space-y-6">
+        {/* Header compact cu titlu, dropdown și hartă */}
+        <Card>
+          <CardHeader className="pb-4">
+            <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
+              {/* Titlu și controale */}
+              <div className="space-y-4 lg:flex-1">
+                <div>
+                  <CardTitle className="text-3xl font-bold tracking-tight">Statistici {year}</CardTitle>
+                  <CardDescription className="mt-2">Analiză detaliată a performanței studenților</CardDescription>
+                </div>
+
+                {/* Text explicativ și controale pentru județ */}
+                <div className="space-y-3">
+                  <div>
+                    <h4 className="text-sm font-medium text-foreground mb-2">Selectați județul</h4>
+                    <p className="text-xs text-muted-foreground">
+                      Filtrați datele după județ folosind dropdown-ul sau făcând click pe hartă
+                    </p>
+                  </div>
+
+                  {counties.length > 0 && (
+                    <div className="space-y-2">
+                      <Select value={selectedCounty} onValueChange={setSelectedCounty}>
+                        <SelectTrigger className="w-full sm:w-64">
+                          <SelectValue placeholder="Filtrați după județ" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Toate Județele</SelectItem>
+                          {counties.map((county) => (
+                            <SelectItem key={county} value={county}>
+                              {county}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+
+                      {/* Buton Reset mai mic */}
+                      {selectedCounty !== "all" && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setSelectedCounty("all")}
+                          className="text-xs h-8"
+                        >
+                          Resetează Județul
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Hartă pe dreapta */}
+              <div className="lg:w-80 xl:w-96 lg:flex-shrink-0">
+                <RomaniaMap
+                  selectedCounty={selectedCounty}
+                  onCountySelect={setSelectedCounty}
+                  availableCounties={counties}
+                />
+              </div>
+            </div>
+          </CardHeader>
+        </Card>
       </div>
 
       {/* Overview Stats */}
@@ -181,13 +229,10 @@ export default function YearPageClient({ year }: YearPageClientProps) {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Absenți</CardTitle> {/* Changed title here */}
+            <CardTitle className="text-sm font-medium">Absenți Total</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalAbsenteesAnySubject}</div> {/* Display total absentees */}
-            <div className="text-xs text-muted-foreground mt-1">
-              %{(stats.totalAbsenteesAnySubject / stats.totalStudents).toFixed(3)}
-            </div>
+            <div className="text-2xl font-bold">{stats.totalAbsenteesAnySubject}</div>
           </CardContent>
         </Card>
       </div>

@@ -40,6 +40,7 @@ interface DetailedStats {
     nativeLanguageGrades: number[]
   }
   totalAbsenteesAnySubject: number
+  passRate: number
 }
 
 interface YearPageClientProps {
@@ -263,6 +264,15 @@ export default function YearPageClient({ year }: YearPageClientProps) {
             <div className="text-xs text-muted-foreground mt-1">
               +{stats.contestations.increased} / -{stats.contestations.decreased}
             </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Rata de Promovabilitate</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.passRate.toFixed(1)}%</div>
           </CardContent>
         </Card>
 

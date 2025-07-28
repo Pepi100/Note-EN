@@ -340,6 +340,7 @@ export function calculateDetailedStats(data: StudentData[]) {
         nativeLanguageGrades: [],
       },
       totalAbsenteesAnySubject: 0,
+      passRate: 0,
     }
   }
 
@@ -441,6 +442,32 @@ export function calculateDetailedStats(data: StudentData[]) {
     }
   })
 
+  // Calculează rata de promovabilitate
+  let promotedStudents = 0
+  data.forEach((student) => {
+    const finalGrade = typeof student.Medie_en === "number" ? student.Medie_en : 0
+    const finalRo = typeof student.Fin_ro === "number" ? student.Fin_ro : 0
+    const finalMate = typeof student.Fin_mate === "number" ? student.Fin_mate : 0
+    const finalLm = typeof student.Fin_lm === "number" ? student.Fin_lm : 0
+
+    // Criterii de promovare
+    const passedOverall = finalGrade >= 5
+    const passedRomanian = finalRo >= 5
+    const passedMathematics = finalMate >= 5
+
+    let passedNativeLanguage = true // Presupunem că a trecut dacă nu a susținut examenul
+    if (student.Lb_mat !== "-") {
+      // Dacă a susținut examenul de limbă maternă, trebuie să aibă nota >= 5
+      passedNativeLanguage = finalLm >= 5
+    }
+
+    if (passedOverall && passedRomanian && passedMathematics && passedNativeLanguage) {
+      promotedStudents++
+    }
+  })
+
+  const passRate = totalStudents > 0 ? (promotedStudents / totalStudents) * 100 : 0
+
   // Pregătește distribuțiile de note pentru histograme
   const finalGrades = validFinalGrades.map((student) => student.Medie_en)
   const romanianGrades = validRomanianGrades.map((student) => student.Fin_ro as number)
@@ -482,6 +509,7 @@ export function calculateDetailedStats(data: StudentData[]) {
       nativeLanguageGrades,
     },
     totalAbsenteesAnySubject,
+    passRate,
   }
 }
 

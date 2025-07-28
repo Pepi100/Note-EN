@@ -262,7 +262,8 @@ def transform_exam_csv(input_path: str, output_path: str = None, p: float = 0):
 
         "MEDIA": "Medie_en",
         "MEDIA V-VIII": "Medie_5-8",
-        "JUDET": "Judet"
+        "JUDET": "Judet",
+        "COD SIIIR":"SIIIR"
     }
     df = df.rename(columns=rename_map)
 
@@ -290,7 +291,7 @@ def transform_exam_csv(input_path: str, output_path: str = None, p: float = 0):
 
     # --- Select and rearrange columns in requested order ---
     final_columns = [
-        "Cod", "Sex", "Mediu","Judet",
+        "Cod", "Sex", "Mediu","Judet","SIIIR",
         "Nota_ro", "Con_ro", "Fin_ro",
         "Nota_mate", "Con_mate", "Fin_mate",
         "Lb_mat", "Nota_lm", "Con_lm", "Fin_lm",
@@ -316,24 +317,65 @@ def fix_coduri():
 # append_a_to_b(r"csv\datedeschise-retea-2019-2020.csv", r"csv\CODURI SIIIR.csv", r"csv\CODURI SIIIR.csv")
 
 
-# xlsx_to_csv(r"csv\2017.ods")
 
-# input_path = r"csv\2016.csv"
-# output_path = r"csv\2016.csv"
 
-# with open(input_path, "r", encoding="utf-8") as f:
-#     text = f.read()
 
-# # Replace all commas with dots (for decimals)
-# text = text.replace(",", ".")
 
-# # Replace all semicolons with commas (to fix separator)
-# text = text.replace(";", ",")
+def xlsx_to_final(year, p):
+    xlsx_to_csv(f"csv\{year}.xlsx",f"csv\{year}.csv")
+    clean_csv(f"csv\{year}.csv")
+    transform_exam_csv(f"csv\{year}.csv", f"public\{year}.csv", p)
+    print(unknown)
+    print(len(unknown))
+    print(f"Finished year {year}!")
 
-# with open(output_path, "w", encoding="utf-8") as f:
-#     f.write(text)
 
-clean_csv(r"csv\2016.csv")
-transform_exam_csv(r"csv\2016.csv", r"public\2016.csv", 0.2)
-print(unknown)
-print(len(unknown))
+
+
+# year = 2017
+# xlsx_to_csv(f"csv\{year}.ods",f"csv\{year}.csv")
+# clean_csv(f"csv\{year}.csv")
+# transform_exam_csv(f"csv\{year}.csv", f"public\{year}.csv", 0.2)
+
+# print(unknown)
+# print(len(unknown))
+# print(f"Finished year {year}!")
+
+# xlsx_to_final(2022,0.2)
+# xlsx_to_final(2023,0)
+# xlsx_to_final(2024,0)
+
+
+import re
+
+def transform_csv(input_path, output_path):
+    df = pd.read_csv(input_path)
+
+    # Apply transformations
+    df_out = pd.DataFrame()
+    df_out['Cod'] = df['ID_candidat'].apply(lambda x: re.sub(r'\D', '', x))
+    df_out['Sex'] = 'M'
+    df_out['Mediu'] = 'RURAL'
+    df_out['Judet'] = df['Judet']
+    df_out['SIIIR'] = '1061105062'
+
+    df_out['Nota_ro'] = df['Nota_ro']
+    df_out['Con_ro'] = df['Contestatie_ro']
+    df_out['Fin_ro'] = df['Nota_finala_ro']
+    df_out['Nota_mate'] = df['Nota_mate']
+    df_out['Con_mate'] = df['Contestatie_mate']
+    df_out['Fin_mate'] = df['Nota_finala_mate']
+    df_out['Lb_mat'] = df['Limba_materna']
+    df_out['Nota_lm'] = df['Nota_lm']
+    df_out['Fin_lm'] = df['Nota_finala_lm']
+    df_out['Medie_en'] = df['Medie_en']
+
+    df_out['Medie_5-8'] = '-'
+    df_out['Admitere'] = df['Medie_en']
+
+    # Save to CSV
+    df_out.to_csv(output_path, index=False)
+
+# Usage:
+year = 2025
+transform_csv(f"csv\{year}.csv", f"public\{year}.csv")

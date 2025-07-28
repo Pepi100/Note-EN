@@ -12,9 +12,9 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
       <div className="rounded-lg border bg-background p-2 shadow-md">
-        <p className="font-medium">{`Grade Interval: ${label}`}</p>
+        <p className="font-medium">{`Interval Note: ${label}`}</p>
         <p className="text-sm">
-          <span className="font-medium">{payload[0].value}</span> students
+          <span className="font-medium">{payload[0].value}</span> studenți
         </p>
       </div>
     )
@@ -27,7 +27,7 @@ export function GradeHistogram({ data, title }: GradeHistogramProps) {
   if (!data || data.length === 0) {
     return (
       <div className="h-64 flex items-center justify-center text-muted-foreground">
-        No data available for {title.toLowerCase()}
+        Nu sunt date disponibile pentru {title.toLowerCase()}
       </div>
     )
   }
@@ -98,9 +98,9 @@ export function GradeHistogram({ data, title }: GradeHistogramProps) {
             angle={-45} // Rotate labels to prevent overlap
             textAnchor="end" // Anchor text at the end for rotation
             interval={0} // Show all labels
-            label={{ value: "Grade Interval", position: "insideBottom", offset: 20 }} // Adjusted offset
+            label={{ value: "Interval Note", position: "insideBottom", offset: 20 }} // Adjusted offset
           />
-          <YAxis tick={{ fontSize: 12 }} label={{ value: "Students", angle: -90, position: "insideLeft" }} />
+          <YAxis tick={{ fontSize: 12 }} label={{ value: "Studenți", angle: -90, position: "insideLeft" }} />
           <Tooltip content={<CustomTooltip />} />
           <Bar dataKey="count" fill="#3b82f6" />
         </BarChart>

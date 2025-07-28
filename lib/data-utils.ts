@@ -1,70 +1,25 @@
 import Papa from "papaparse"
 import { getAssetPath } from "./path-utils"
 
-
-
-const judete = {
-  "ALBA": "AB",
-  "ARAD": "AR",
-  "ARGES": "AG",
-  "BACAU": "BC",
-  "BIHOR": "BH",
-  "BISTRITA-NASAUD": "BN",
-  "BOTOSANI": "BT",
-  "BRAILA": "BR",
-  "BRASOV": "BV",
-  "BUZAU": "BZ",
-  "CALARASI": "CL",
-  "CARAS-SEVERIN": "CS",
-  "CLUJ": "CJ",
-  "CONSTANTA": "CT",
-  "COVASNA": "CV",
-  "DAMBOVITA": "DB",
-  "DOLJ": "DJ",
-  "GALATI": "GL",
-  "GIURGIU": "GR",
-  "GORJ": "GJ",
-  "HARGHITA": "HR",
-  "HUNEDOARA": "HD",
-  "IALOMITA": "IL",
-  "IASI": "IS",
-  "ILFOV": "IF",
-  "MARAMURES": "MM",
-  "MEHEDINTI": "MH",
-  "MURES": "MS",
-  "NEAMT": "NT",
-  "OLT": "OT",
-  "PRAHOVA": "PH",
-  "SALAJ": "SJ",
-  "SATU MARE": "SM",
-  "SIBIU": "SB",
-  "SUCEAVA": "SV",
-  "TELEORMAN": "TR",
-  "TIMIS": "TM",
-  "TULCEA": "TL",
-  "VALCEA": "VL",
-  "VASLUI": "VS",
-  "VRANCEA": "VN",
-  "BUCURESTI": "B"
-};
-
-
-
 export interface StudentData {
+  Cod: string
+  Sex: string
+  Mediu: string
   Judet: string
-  ID_candidat: string
-  Scoala: string
+  SIIIR: string
   Nota_ro: number
-  Contestatie_ro: string
-  Nota_finala_ro: number | string // Can be number or "-"
+  Con_ro: string // Contestatie_ro
+  Fin_ro: number | string // Nota_finala_ro
   Nota_mate: number
-  Contestatie_mate: string
-  Nota_finala_mate: number | string // Can be number or "-"
-  Limba_materna: string
+  Con_mate: string // Contestatie_mate
+  Fin_mate: number | string // Nota_finala_mate
+  Lb_mat: string // Limba_materna
   Nota_lm: number
-  Contestatie_lm: string
-  Nota_finala_lm: number | string // Can be number or "-"
+  Con_lm: string // Contestatie_lm
+  Fin_lm: number | string // Nota_finala_lm
   Medie_en: number
+  Medie_5_8: number // Medie_5-8
+  Admitere: number
   [key: string]: any // Keep for flexibility with other columns
 }
 
@@ -96,21 +51,27 @@ export async function parseCSV(filePath: string): Promise<StudentData[]> {
         header: true,
         skipEmptyLines: true,
         dynamicTyping: false,
+        transformHeader: (header: string) => {
+          // Map new CSV headers to internal interface names if necessary
+          // For "Medie_5-8" to "Medie_5_8"
+          if (header === "Medie_5-8") return "Medie_5_8"
+          return header // Use header as is for others
+        },
         transform: (value: string, field: string) => {
           // Fields that can be '-' but should be numbers if not '-'
-          if (["Nota_finala_ro", "Nota_finala_mate", "Nota_finala_lm"].includes(field)) {
+          if (["Fin_ro", "Fin_mate", "Fin_lm"].includes(field)) {
             if (value === "-") {
               return "-" // Keep as string if it's '-'
             }
             const num = Number.parseFloat(value?.toString() || "0")
             return isNaN(num) ? 0 : num // Parse as number otherwise
           }
-          // Fields that are always numbers (initial grades, final average)
-          if (["Medie_en", "Nota_ro", "Nota_mate", "Nota_lm"].includes(field)) {
+          // Fields that are always numbers (initial grades, final average, new numeric fields)
+          if (["Nota_ro", "Nota_mate", "Nota_lm", "Medie_en", "Medie_5_8", "Admitere"].includes(field)) {
             const num = Number.parseFloat(value?.toString() || "0")
             return isNaN(num) ? 0 : num
           }
-          // All other fields (Judet, ID_candidat, Scoala, Contestatie_X, Limba_materna, Absent_X) are strings
+          // All other fields (Cod, Sex, Mediu, Judet, SIIIR, Con_ro, Con_mate, Con_lm, Lb_mat) are strings
           return value?.toString() || ""
         },
         complete: (results: Papa.ParseResult<StudentData>) => {
@@ -152,8 +113,8 @@ export function calculateYearStats(data: StudentData[]) {
   // Count absentees (any subject) - this is for the overview page, using the old logic for simplicity
   // The detailed page will use the new logic
   const absenteeCount = data.filter(
-    (student) => student.Contestatie_ro !== "-" || student.Contestatie_mate !== "-" || student.Contestatie_lm !== "-",
-  ).length // Reverted to a simpler check for overview, as detailed logic is complex for a single number
+    (student) => student.Con_ro !== "-" || student.Con_mate !== "-" || student.Con_lm !== "-",
+  ).length
 
   const absenteePercentage = totalStudents > 0 ? (absenteeCount / totalStudents) * 100 : 0
 
@@ -194,23 +155,18 @@ export function calculateDetailedStats(data: StudentData[]) {
         mathematicsGrades: [],
         nativeLanguageGrades: [],
       },
+      totalAbsenteesAnySubject: 0, // New property
     }
   }
 
   const totalStudents = data.length
 
   // Calculate averages for valid grades only
-  // Filter out students where Nota_finala_X is '-' or 0 (if 0 means invalid/absent)
+  // Filter out students where Fin_X is '-' or 0 (if 0 means invalid/absent)
   const validFinalGrades = data.filter((student) => typeof student.Medie_en === "number" && student.Medie_en > 0)
-  const validRomanianGrades = data.filter(
-    (student) => typeof student.Nota_finala_ro === "number" && student.Nota_finala_ro > 0,
-  )
-  const validMathGrades = data.filter(
-    (student) => typeof student.Nota_finala_mate === "number" && student.Nota_finala_mate > 0,
-  )
-  const validNativeGrades = data.filter(
-    (student) => typeof student.Nota_finala_lm === "number" && student.Nota_finala_lm > 0,
-  )
+  const validRomanianGrades = data.filter((student) => typeof student.Fin_ro === "number" && student.Fin_ro > 0)
+  const validMathGrades = data.filter((student) => typeof student.Fin_mate === "number" && student.Fin_mate > 0)
+  const validNativeGrades = data.filter((student) => typeof student.Fin_lm === "number" && student.Fin_lm > 0)
 
   const averageFinalGrade =
     validFinalGrades.length > 0
@@ -219,30 +175,38 @@ export function calculateDetailedStats(data: StudentData[]) {
 
   const averageRomanian =
     validRomanianGrades.length > 0
-      ? validRomanianGrades.reduce((sum, student) => sum + (student.Nota_finala_ro as number), 0) /
-        validRomanianGrades.length // Cast to number
+      ? validRomanianGrades.reduce((sum, student) => sum + (student.Fin_ro as number), 0) / validRomanianGrades.length
       : 0
 
   const averageMathematics =
     validMathGrades.length > 0
-      ? validMathGrades.reduce((sum, student) => sum + (student.Nota_finala_mate as number), 0) / validMathGrades.length // Cast to number
+      ? validMathGrades.reduce((sum, student) => sum + (student.Fin_mate as number), 0) / validMathGrades.length
       : 0
 
   const averageNativeLanguage =
     validNativeGrades.length > 0
-      ? validNativeGrades.reduce((sum, student) => sum + (student.Nota_finala_lm as number), 0) /
-        validNativeGrades.length // Cast to number
+      ? validNativeGrades.reduce((sum, student) => sum + (student.Fin_lm as number), 0) / validNativeGrades.length
       : 0
 
   // Calculate absence statistics based on new rules
-  const romanianAbsent = data.filter((student) => student.Nota_finala_ro === "-").length
-  const mathematicsAbsent = data.filter((student) => student.Nota_finala_mate === "-").length
+  const romanianAbsent = data.filter((student) => student.Fin_ro === "-").length
+  const mathematicsAbsent = data.filter((student) => student.Fin_mate === "-").length
 
   // New logic for Native Language Absentees
-  const studentsTakingNativeLanguage = data.filter((student) => student.Limba_materna !== "-").length
-  const nativeLanguageAbsent = data.filter(
-    (student) => student.Nota_finala_lm === "-" && student.Limba_materna !== "-",
-  ).length
+  const studentsTakingNativeLanguage = data.filter((student) => student.Lb_mat !== "-").length
+  const nativeLanguageAbsent = data.filter((student) => student.Fin_lm === "-" && student.Lb_mat !== "-").length
+
+  // Calculate total absentees for the card
+  let totalAbsenteesAnySubject = 0
+  data.forEach((student) => {
+    const isAbsentRomanian = student.Fin_ro === "-"
+    const isAbsentMathematics = student.Fin_mate === "-"
+    const isAbsentNativeLanguage = student.Fin_lm === "-" && student.Lb_mat !== "-" // Only count if they had to take it
+
+    if (isAbsentRomanian || isAbsentMathematics || isAbsentNativeLanguage) {
+      totalAbsenteesAnySubject++
+    }
+  })
 
   // Calculate contestations based on new logic
   let totalContestations = 0
@@ -251,11 +215,11 @@ export function calculateDetailedStats(data: StudentData[]) {
 
   data.forEach((student) => {
     // Romanian Contestations
-    if (student.Contestatie_ro !== "-") {
+    if (student.Con_ro !== "-") {
       totalContestations++
       // Ensure grades are numbers before comparison
       const initialRo = typeof student.Nota_ro === "number" ? student.Nota_ro : 0
-      const finalRo = typeof student.Nota_finala_ro === "number" ? student.Nota_finala_ro : 0
+      const finalRo = typeof student.Fin_ro === "number" ? student.Fin_ro : 0
 
       if (finalRo > initialRo) {
         increasedContestations++
@@ -265,11 +229,11 @@ export function calculateDetailedStats(data: StudentData[]) {
     }
 
     // Mathematics Contestations
-    if (student.Contestatie_mate !== "-") {
+    if (student.Con_mate !== "-") {
       totalContestations++
       // Ensure grades are numbers before comparison
       const initialMate = typeof student.Nota_mate === "number" ? student.Nota_mate : 0
-      const finalMate = typeof student.Nota_finala_mate === "number" ? student.Nota_finala_mate : 0
+      const finalMate = typeof student.Fin_mate === "number" ? student.Fin_mate : 0
 
       if (finalMate > initialMate) {
         increasedContestations++
@@ -279,11 +243,11 @@ export function calculateDetailedStats(data: StudentData[]) {
     }
 
     // Native Language Contestations
-    if (student.Contestatie_lm !== "-") {
+    if (student.Con_lm !== "-") {
       totalContestations++
       // Ensure grades are numbers before comparison
       const initialLm = typeof student.Nota_lm === "number" ? student.Nota_lm : 0
-      const finalLm = typeof student.Nota_finala_lm === "number" ? student.Nota_finala_lm : 0
+      const finalLm = typeof student.Fin_lm === "number" ? student.Fin_lm : 0
 
       if (finalLm > initialLm) {
         increasedContestations++
@@ -295,9 +259,9 @@ export function calculateDetailedStats(data: StudentData[]) {
 
   // Prepare grade distributions
   const finalGrades = validFinalGrades.map((student) => student.Medie_en)
-  const romanianGrades = validRomanianGrades.map((student) => student.Nota_finala_ro as number) // Cast to number as it's filtered
-  const mathematicsGrades = validMathGrades.map((student) => student.Nota_finala_mate as number) // Cast to number as it's filtered
-  const nativeLanguageGrades = validNativeGrades.map((student) => student.Nota_finala_lm as number) // Cast to number as it's filtered
+  const romanianGrades = validRomanianGrades.map((student) => student.Fin_ro as number)
+  const mathematicsGrades = validMathGrades.map((student) => student.Fin_mate as number)
+  const nativeLanguageGrades = validNativeGrades.map((student) => student.Fin_lm as number)
 
   return {
     totalStudents,
@@ -333,6 +297,7 @@ export function calculateDetailedStats(data: StudentData[]) {
       mathematicsGrades,
       nativeLanguageGrades,
     },
+    totalAbsenteesAnySubject, // New property
   }
 }
 

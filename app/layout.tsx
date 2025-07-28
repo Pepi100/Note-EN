@@ -8,8 +8,8 @@ import { ThemeProvider } from "@/components/theme-provider" // Import ThemeProvi
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Student Statistics Dashboard",
-  description: "Dashboard for analyzing student performance data across years",
+  title: "Tablou de Bord Statistici Studenți", // Translated title
+  description: "Tablou de bord pentru analiza datelor de performanță ale studenților pe parcursul anilor", // Translated description
 }
 
 export default function RootLayout({
@@ -18,7 +18,9 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="ro" suppressHydrationWarning>
+      {" "}
+      {/* Changed lang to "ro" */}
       <body className={inter.className}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <Navbar />

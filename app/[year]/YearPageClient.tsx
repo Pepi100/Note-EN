@@ -13,7 +13,7 @@ interface DetailedStats {
   absentStats: {
     romanian: { count: number; percentage: number }
     mathematics: { count: number; percentage: number }
-    nativeLanguage: { count: number; percentage: number; totalTaking: number } // Added totalTaking
+    nativeLanguage: { count: number; percentage: number; totalTaking: number }
   }
   gradeAverages: {
     romanian: number
@@ -31,6 +31,7 @@ interface DetailedStats {
     mathematicsGrades: number[]
     nativeLanguageGrades: number[]
   }
+  totalAbsenteesAnySubject: number // New property
 }
 
 interface YearPageClientProps {
@@ -55,7 +56,9 @@ export default function YearPageClient({ year }: YearPageClientProps) {
         const csvData = await parseCSV(`/${year}.csv`)
 
         if (csvData.length === 0) {
-          setError(`No data found for year ${year}. Please check if the CSV file exists and contains valid data.`)
+          setError(
+            `Nu s-au găsit date pentru anul ${year}. Vă rugăm să verificați dacă fișierul CSV există și conține date valide.`,
+          )
           return
         }
 
@@ -63,9 +66,9 @@ export default function YearPageClient({ year }: YearPageClientProps) {
         setFilteredData(csvData)
         setCounties(getUniqueCounties(csvData))
       } catch (error) {
-        console.error(`Error loading ${year} data:`, error)
+        console.error(`Eroare la încărcarea datelor pentru ${year}:`, error)
         setError(
-          `Failed to load data for year ${year}. Please check if the CSV file is available and properly formatted.`,
+          `Nu s-au putut încărca datele pentru anul ${year}. Vă rugăm să verificați dacă fișierul CSV este disponibil și formatat corect.`,
         )
       } finally {
         setLoading(false)
@@ -88,7 +91,7 @@ export default function YearPageClient({ year }: YearPageClientProps) {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-lg">Loading {year} data...</div>
+        <div className="text-lg">Se încarcă datele pentru anul {year}...</div>
       </div>
     )
   }
@@ -101,7 +104,7 @@ export default function YearPageClient({ year }: YearPageClientProps) {
         </Alert>
         <div className="text-center">
           <p className="text-muted-foreground">
-            Make sure the {year}.csv file is placed in the public/ directory and contains the required columns.
+            Asigurați-vă că fișierul {year}.csv este plasat în directorul public/ și conține coloanele necesare.
           </p>
         </div>
       </div>
@@ -111,7 +114,7 @@ export default function YearPageClient({ year }: YearPageClientProps) {
   if (!stats) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-lg">No data available for {year}</div>
+        <div className="text-lg">Nu sunt date disponibile pentru anul {year}</div>
       </div>
     )
   }
@@ -120,17 +123,17 @@ export default function YearPageClient({ year }: YearPageClientProps) {
     <div className="space-y-8">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-bold tracking-tight">{year} Statistics</h1>
-          <p className="text-muted-foreground mt-2">Detailed analysis of student performance</p>
+          <h1 className="text-4xl font-bold tracking-tight">Statistici {year}</h1>
+          <p className="text-muted-foreground mt-2">Analiză detaliată a performanței studenților</p>
         </div>
         {counties.length > 0 && (
           <div className="w-full sm:w-64">
             <Select value={selectedCounty} onValueChange={setSelectedCounty}>
               <SelectTrigger>
-                <SelectValue placeholder="Filter by county" />
+                <SelectValue placeholder="Filtrați după județ" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Counties</SelectItem>
+                <SelectItem value="all">Toate Județele</SelectItem>
                 {counties.map((county) => (
                   <SelectItem key={county} value={county}>
                     {county}
@@ -146,7 +149,7 @@ export default function YearPageClient({ year }: YearPageClientProps) {
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Total Students</CardTitle>
+            <CardTitle className="text-sm font-medium">Număr Total Studenți</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalStudents.toLocaleString()}</div>
@@ -155,7 +158,7 @@ export default function YearPageClient({ year }: YearPageClientProps) {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Average Final Grade</CardTitle>
+            <CardTitle className="text-sm font-medium">Medie Finală</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
@@ -166,7 +169,7 @@ export default function YearPageClient({ year }: YearPageClientProps) {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Total Contestations</CardTitle>
+            <CardTitle className="text-sm font-medium">Contestații Totale</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.contestations.total}</div>
@@ -178,12 +181,12 @@ export default function YearPageClient({ year }: YearPageClientProps) {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Romanian Absentees</CardTitle>
+            <CardTitle className="text-sm font-medium">Absenți</CardTitle> {/* Changed title here */}
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.absentStats.romanian.count}</div>
+            <div className="text-2xl font-bold">{stats.totalAbsenteesAnySubject}</div> {/* Display total absentees */}
             <div className="text-xs text-muted-foreground mt-1">
-              {stats.absentStats.romanian.percentage.toFixed(1)}%
+              %{(stats.totalAbsenteesAnySubject / stats.totalStudents).toFixed(3)}
             </div>
           </CardContent>
         </Card>
@@ -192,34 +195,34 @@ export default function YearPageClient({ year }: YearPageClientProps) {
       {/* Absence Statistics */}
       <Card>
         <CardHeader>
-          <CardTitle>Absence Statistics by Subject</CardTitle>
-          <CardDescription>Number and percentage of absent students per subject</CardDescription>
+          <CardTitle>Statistici Absențe pe Materie</CardTitle>
+          <CardDescription>Numărul și procentul studenților absenți pe materie</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-3">
             <div className="space-y-2">
-              <h4 className="font-medium">Romanian</h4>
+              <h4 className="font-medium">Română</h4>
               <div className="text-2xl font-bold">{stats.absentStats.romanian.count}</div>
               <div className="text-sm text-muted-foreground">
-                {stats.absentStats.romanian.percentage.toFixed(1)}% absent
+                {stats.absentStats.romanian.percentage.toFixed(1)}% absenți
               </div>
             </div>
             <div className="space-y-2">
-              <h4 className="font-medium">Mathematics</h4>
+              <h4 className="font-medium">Matematică</h4>
               <div className="text-2xl font-bold">{stats.absentStats.mathematics.count}</div>
               <div className="text-sm text-muted-foreground">
-                {stats.absentStats.mathematics.percentage.toFixed(1)}% absent
+                {stats.absentStats.mathematics.percentage.toFixed(1)}% absenți
               </div>
             </div>
             <div className="space-y-2">
-              <h4 className="font-medium">Native Language</h4>
+              <h4 className="font-medium">Limba Maternă</h4>
               <div className="text-2xl font-bold">{stats.absentStats.nativeLanguage.count}</div>
               <div className="text-sm text-muted-foreground">
-                {stats.absentStats.nativeLanguage.percentage.toFixed(1)}% absent
+                {stats.absentStats.nativeLanguage.percentage.toFixed(1)}% absenți
               </div>
               {stats.absentStats.nativeLanguage.totalTaking > 0 && (
                 <div className="text-xs text-muted-foreground">
-                  (out of {stats.absentStats.nativeLanguage.totalTaking} students)
+                  (din {stats.absentStats.nativeLanguage.totalTaking} studenți)
                 </div>
               )}
             </div>
@@ -231,49 +234,49 @@ export default function YearPageClient({ year }: YearPageClientProps) {
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Final Grade Distribution</CardTitle>
+            <CardTitle>Distribuția Notelor Finale</CardTitle>
             <CardDescription>
-              Average: {stats.averageFinalGrade > 0 ? stats.averageFinalGrade.toFixed(2) : "N/A"}
+              Medie: {stats.averageFinalGrade > 0 ? stats.averageFinalGrade.toFixed(2) : "N/A"}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <GradeHistogram data={stats.gradeDistributions.finalGrades} title="Final Grades" />
+            <GradeHistogram data={stats.gradeDistributions.finalGrades} title="Note Finale" />
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Romanian Grade Distribution</CardTitle>
+            <CardTitle>Distribuția Notelor la Română</CardTitle>
             <CardDescription>
-              Average: {stats.gradeAverages.romanian > 0 ? stats.gradeAverages.romanian.toFixed(2) : "N/A"}
+              Medie: {stats.gradeAverages.romanian > 0 ? stats.gradeAverages.romanian.toFixed(2) : "N/A"}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <GradeHistogram data={stats.gradeDistributions.romanianGrades} title="Romanian Grades" />
+            <GradeHistogram data={stats.gradeDistributions.romanianGrades} title="Note Română" />
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Mathematics Grade Distribution</CardTitle>
+            <CardTitle>Distribuția Notelor la Matematică</CardTitle>
             <CardDescription>
-              Average: {stats.gradeAverages.mathematics > 0 ? stats.gradeAverages.mathematics.toFixed(2) : "N/A"}
+              Medie: {stats.gradeAverages.mathematics > 0 ? stats.gradeAverages.mathematics.toFixed(2) : "N/A"}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <GradeHistogram data={stats.gradeDistributions.mathematicsGrades} title="Mathematics Grades" />
+            <GradeHistogram data={stats.gradeDistributions.mathematicsGrades} title="Note Matematică" />
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Native Language Grade Distribution</CardTitle>
+            <CardTitle>Distribuția Notelor la Limba Maternă</CardTitle>
             <CardDescription>
-              Average: {stats.gradeAverages.nativeLanguage > 0 ? stats.gradeAverages.nativeLanguage.toFixed(2) : "N/A"}
+              Medie: {stats.gradeAverages.nativeLanguage > 0 ? stats.gradeAverages.nativeLanguage.toFixed(2) : "N/A"}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <GradeHistogram data={stats.gradeDistributions.nativeLanguageGrades} title="Native Language Grades" />
+            <GradeHistogram data={stats.gradeDistributions.nativeLanguageGrades} title="Note Limba Maternă" />
           </CardContent>
         </Card>
       </div>

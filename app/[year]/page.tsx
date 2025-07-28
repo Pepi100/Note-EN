@@ -1,7 +1,11 @@
 import YearPageClient from "./YearPageClient"
 
 export async function generateStaticParams() {
-  return [{ year: "2023" }, { year: "2024" }, { year: "2025" }]
+  const years = []
+  for (let i = 2016; i <= 2025; i++) {
+    years.push({ year: i.toString() })
+  }
+  return years
 }
 
 export default function YearPage({ params }: { params: { year: string } }) {

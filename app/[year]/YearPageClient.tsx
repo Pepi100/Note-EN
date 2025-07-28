@@ -4,11 +4,17 @@ import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { parseCSV, type StudentData, calculateDetailedStats, getUniqueCounties } from "@/lib/data-utils"
+import {
+  parseCSV, // Importă funcția parseCSV pentru a citi fișierul CSV
+  type StudentData, // Importă tipul StudentData
+  calculateDetailedStats, // Importă funcția calculateDetailedStats pentru a calcula statisticile detaliate
+  getUniqueCounties, // Importă funcția getUniqueCounties pentru a extrage județele unice
+} from "@/lib/data-utils"
 import { GradeHistogram } from "@/components/grade-histogram"
 import { RomaniaMap } from "@/components/romania-map"
 import { Button } from "@/components/ui/button"
 
+// Interfață pentru statisticile detaliate calculate de `calculateDetailedStats`
 interface DetailedStats {
   totalStudents: number
   averageFinalGrade: number
@@ -41,20 +47,35 @@ interface YearPageClientProps {
 }
 
 export default function YearPageClient({ year }: YearPageClientProps) {
+  // Stochează toate datele brute pentru anul curent.
   const [data, setData] = useState<StudentData[]>([])
+  // Stochează datele filtrate în funcție de județul selectat.
   const [filteredData, setFilteredData] = useState<StudentData[]>([])
+  // Stochează statisticile detaliate calculate din `filteredData`.
   const [stats, setStats] = useState<DetailedStats | null>(null)
+  // Stochează lista de județe unice disponibile în datele anului curent.
   const [counties, setCounties] = useState<string[]>([])
+  // Stochează județul selectat curent de utilizator.
   const [selectedCounty, setSelectedCounty] = useState<string>("all")
+  // Stare pentru a indica dacă datele sunt în curs de încărcare.
   const [loading, setLoading] = useState(true)
+  // Stare pentru a stoca orice mesaj de eroare apărut în timpul încărcării datelor.
   const [error, setError] = useState<string | null>(null)
 
+  /**
+   * @useEffect
+   * @description Acest `useEffect` este responsabil pentru încărcarea datelor CSV specifice anului.
+   *              Rulează ori de câte ori prop-ul `year` se modifică.
+   *              Apelează `parseCSV` pentru a citi fișierul CSV corespunzător anului.
+   *              Populează stările `data`, `filteredData` și `counties`.
+   */
   useEffect(() => {
     const loadData = async () => {
       try {
         setLoading(true)
         setError(null)
 
+        // Apelează funcția `parseCSV` din `lib/data-utils.ts` pentru a citi fișierul CSV al anului curent.
         const csvData = await parseCSV(`/${year}.csv`)
 
         if (csvData.length === 0) {
@@ -65,7 +86,8 @@ export default function YearPageClient({ year }: YearPageClientProps) {
         }
 
         setData(csvData)
-        setFilteredData(csvData)
+        setFilteredData(csvData) // Inițial, datele filtrate sunt toate datele
+        // Apelează funcția `getUniqueCounties` din `lib/data-utils.ts` pentru a extrage județele unice.
         setCounties(getUniqueCounties(csvData))
       } catch (error) {
         console.error(`Eroare la încărcarea datelor pentru ${year}:`, error)
@@ -80,20 +102,35 @@ export default function YearPageClient({ year }: YearPageClientProps) {
     if (year) {
       loadData()
     }
-  }, [year])
+  }, [year]) // Rulează când se schimbă anul
 
+  /**
+   * @useEffect
+   * @description Acest `useEffect` este responsabil pentru filtrarea datelor și recalcularea statisticilor
+   *              ori de câte ori `data` (datele brute) sau `selectedCounty` (județul selectat) se modifică.
+   *              Filtrează `data` în funcție de `selectedCounty` și apoi apelează `calculateDetailedStats`.
+   */
   useEffect(() => {
     if (data.length > 0) {
+      // Filtrează datele în funcție de județul selectat
       const filtered = selectedCounty === "all" ? data : data.filter((student) => student.Judet === selectedCounty)
       setFilteredData(filtered)
+      // Apelează funcția `calculateDetailedStats` din `lib/data-utils.ts` pentru a obține statisticile detaliate.
       setStats(calculateDetailedStats(filtered))
     }
-  }, [data, selectedCounty])
+  }, [data, selectedCounty]) // Rulează când se schimbă datele sau județul selectat
 
+  /**
+   * @function handleCountySelect
+   * @description Funcție callback pentru a actualiza starea `selectedCounty` atunci când utilizatorul
+   *              selectează un județ nou din dropdown sau face click pe hartă.
+   * @param {string} county - Codul județului selectat.
+   */
   const handleCountySelect = (county: string) => {
     setSelectedCounty(county)
   }
 
+  // Afișează un mesaj de încărcare
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -102,6 +139,7 @@ export default function YearPageClient({ year }: YearPageClientProps) {
     )
   }
 
+  // Afișează un mesaj de eroare
   if (error) {
     return (
       <div className="space-y-4">
@@ -117,6 +155,7 @@ export default function YearPageClient({ year }: YearPageClientProps) {
     )
   }
 
+  // Afișează un mesaj dacă nu sunt date disponibile după încărcare/filtrare
   if (!stats) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">

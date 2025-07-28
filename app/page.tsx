@@ -1,32 +1,49 @@
 "use client"
 
-import { useEffect, useState } from "react" // Import useMemo
+import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select" // Import Select components
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import {
-  parseCSV,
-  getOverviewYearMetrics,
-  getUniqueCounties,
-  type OverviewYearMetric,
-  type StudentData,
-} from "@/lib/data-utils" // Import StudentData and getUniqueCounties
+  parseCSV, // Importă funcția parseCSV pentru a citi fișierele CSV
+  getOverviewYearMetrics, // Importă funcția getOverviewYearMetrics pentru a calcula metricile anuale
+  getUniqueCounties, // Importă funcția getUniqueCounties pentru a extrage județele unice
+  type OverviewYearMetric, // Importă tipul OverviewYearMetric
+  type StudentData, // Importă tipul StudentData
+} from "@/lib/data-utils"
 import { Line, LineChart, XAxis, YAxis, CartesianGrid, Legend, ResponsiveContainer, Tooltip } from "recharts"
 import { ChartContainer } from "@/components/ui/chart"
-import { CustomChartTooltip } from "@/components/custom-chart-tooltip"
-import { RomaniaMap } from "@/components/romania-map" // Import RomaniaMap
-import { Button } from "@/components/ui/button" // Import Button
+import { CustomChartTooltip } from "@/components/custom-chart-tooltip" // Re-importă CustomChartTooltip
+import { RomaniaMap } from "@/components/romania-map"
+import { Button } from "@/components/ui/button"
 
 export default function OverviewPage() {
-  const [allDataByYear, setAllDataByYear] = useState<Record<string, StudentData[]>>({}) // Store all raw data, keyed by year
+  // Stochează toate datele brute, organizate pe ani.
+  // Utilizată pentru a filtra datele în funcție de județul selectat fără a reîncărca fișierele.
+  const [allDataByYear, setAllDataByYear] = useState<Record<string, StudentData[]>>({})
+  // Stochează metricile agregate pe an, care sunt afișate în grafice.
+  // Acestea sunt recalculate ori de câte ori se schimbă datele brute sau județul selectat.
   const [yearlyMetrics, setYearlyMetrics] = useState<OverviewYearMetric[]>([])
+  // Stochează lista de județe unice disponibile în toate datele.
+  // Utilizată pentru a popula dropdown-ul de selecție a județului și harta.
   const [counties, setCounties] = useState<string[]>([])
+  // Stochează județul selectat curent de utilizator.
+  // Valoarea implicită este "all" pentru a afișa datele pentru toate județele.
   const [selectedCounty, setSelectedCounty] = useState<string>("all")
+  // Stare pentru a indica dacă datele sunt în curs de încărcare.
   const [loading, setLoading] = useState(true)
+  // Stare pentru a stoca orice mesaj de eroare apărut în timpul încărcării datelor.
   const [error, setError] = useState<string | null>(null)
+  // Stare pentru a stoca informații de depanare, utile pentru diagnosticarea problemelor.
   const [debugInfo, setDebugInfo] = useState<any[]>([])
 
-  // Load all data initially
+  /**
+   * @useEffect
+   * @description Hook-ul `useEffect` este folosit pentru a încărca toate datele CSV la montarea componentei.
+   *              Rulează o singură dată (datorită array-ului de dependențe gol `[]`).
+   *              Apelează `parseCSV` pentru fiecare an din intervalul 2016-2025.
+   *              Colectează toate datele pentru a extrage județele unice.
+   */
   useEffect(() => {
     const loadAllYearData = async () => {
       try {
@@ -47,24 +64,26 @@ export default function OverviewPage() {
         })
 
         const loadedData: Record<string, StudentData[]> = {}
-        let allStudents: StudentData[] = [] // To collect all students for unique counties
+        let allStudents: StudentData[] = [] // Colectează toți studenții pentru a găsi județele unice
 
         for (const year of years) {
           try {
             debug.push(`Se încarcă datele pentru anul ${year}...`)
+            // Apelează funcția `parseCSV` din `lib/data-utils.ts` pentru a citi fișierul CSV al anului curent.
             const data = await parseCSV(`/${year}.csv`)
             debug.push(`S-au încărcat ${data.length} înregistrări pentru ${year}`)
             loadedData[year] = data
-            allStudents = allStudents.concat(data) // Add to overall student list
+            allStudents = allStudents.concat(data) // Adaugă la lista generală de studenți
           } catch (error) {
             console.error(`Eroare la încărcarea datelor pentru ${year}:`, error)
             debug.push(`Eroare la încărcarea datelor pentru ${year}: ${error}`)
-            loadedData[year] = [] // Ensure year exists even if empty
+            loadedData[year] = [] // Asigură că anul există chiar dacă datele sunt goale
           }
         }
 
         setAllDataByYear(loadedData)
-        setCounties(getUniqueCounties(allStudents)) // Get unique counties from all data
+        // Apelează funcția `getUniqueCounties` din `lib/data-utils.ts` pentru a extrage județele unice din toate datele.
+        setCounties(getUniqueCounties(allStudents))
         setDebugInfo(debug)
 
         const hasValidData = Object.values(loadedData).some((dataArray) => dataArray.length > 0)
@@ -85,28 +104,43 @@ export default function OverviewPage() {
     }
 
     loadAllYearData()
-  }, []) // Run only once on mount
+  }, []) // Array de dependențe gol, rulează o singură dată la montare
 
-  // Recalculate metrics when allDataByYear or selectedCounty changes
+  /**
+   * @useEffect
+   * @description Acest `useEffect` este responsabil pentru recalcularea metricilor anuale ori de câte ori
+   *              `allDataByYear` (datele brute încărcate) sau `selectedCounty` (județul selectat) se modifică.
+   *              Filtrează datele pentru fiecare an în funcție de județul selectat și apoi apelează
+   *              `getOverviewYearMetrics` pentru a obține statisticile necesare graficelor.
+   */
   useEffect(() => {
     if (Object.keys(allDataByYear).length > 0) {
-      const years = Object.keys(allDataByYear).sort() // Ensure years are sorted
+      const years = Object.keys(allDataByYear).sort() // Asigură că anii sunt sortați
       const metrics: OverviewYearMetric[] = []
 
       for (const year of years) {
         const dataForYear = allDataByYear[year] || []
+        // Filtrează datele anului curent în funcție de județul selectat
         const filteredDataForYear =
           selectedCounty === "all" ? dataForYear : dataForYear.filter((student) => student.Judet === selectedCounty)
+        // Apelează funcția `getOverviewYearMetrics` din `lib/data-utils.ts` pentru a calcula metricile.
         metrics.push(getOverviewYearMetrics(filteredDataForYear, year))
       }
       setYearlyMetrics(metrics)
     }
-  }, [allDataByYear, selectedCounty])
+  }, [allDataByYear, selectedCounty]) // Rulează când se schimbă datele încărcate sau județul selectat
 
+  /**
+   * @function handleCountySelect
+   * @description Funcție callback pentru a actualiza starea `selectedCounty` atunci când utilizatorul
+   *              selectează un județ nou din dropdown sau face click pe hartă.
+   * @param {string} county - Codul județului selectat.
+   */
   const handleCountySelect = (county: string) => {
     setSelectedCounty(county)
   }
 
+  // Afișează un mesaj de încărcare în timpul preluării datelor
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -115,6 +149,7 @@ export default function OverviewPage() {
     )
   }
 
+  // Afișează un mesaj de eroare dacă a apărut o problemă la încărcarea datelor
   if (error) {
     return (
       <div className="space-y-4">
@@ -130,7 +165,7 @@ export default function OverviewPage() {
           </p>
         </div>
 
-        {/* Debug information */}
+        {/* Informații de depanare */}
         <div className="mt-8 p-4 bg-muted rounded-lg">
           <h3 className="font-medium mb-2">Informații de Depanare:</h3>
           <pre className="text-xs overflow-auto whitespace-pre-wrap">{JSON.stringify(debugInfo, null, 2)}</pre>
@@ -139,10 +174,11 @@ export default function OverviewPage() {
     )
   }
 
+  // Verifică dacă există date de afișat după filtrare
   const hasData = yearlyMetrics.some((metric) => metric.totalStudents > 0)
 
+  // Afișează un mesaj dacă nu există date deloc (chiar și pentru "Toate Județele")
   if (!hasData && selectedCounty === "all") {
-    // Only show this if no data at all, not just for a filtered county
     return (
       <div className="space-y-4">
         <Alert>
@@ -156,7 +192,7 @@ export default function OverviewPage() {
           </p>
         </div>
 
-        {/* Debug information */}
+        {/* Informații de depanare */}
         <div className="mt-8 p-4 bg-muted rounded-lg">
           <h3 className="font-medium mb-2">Informații de Depanare:</h3>
           <pre className="text-xs overflow-auto whitespace-pre-wrap">{JSON.stringify(debugInfo, null, 2)}</pre>
@@ -237,7 +273,7 @@ export default function OverviewPage() {
         </Card>
       </div>
 
-      {/* Display a message if no data for the selected county */}
+      {/* Afișează un mesaj dacă nu există date pentru județul selectat */}
       {!hasData && selectedCounty !== "all" && (
         <Alert>
           <AlertDescription>
@@ -246,7 +282,7 @@ export default function OverviewPage() {
         </Alert>
       )}
 
-      {/* Overview Charts - only render if there is data to show */}
+      {/* Graficele de prezentare generală - se randează doar dacă există date de afișat */}
       {hasData && (
         <div className="grid gap-6 lg:grid-cols-2">
           {/* Grafic: Număr Total Participanți */}
@@ -273,7 +309,7 @@ export default function OverviewPage() {
                       tickLine={false}
                       axisLine={false}
                       tick={{ fontSize: 12 }}
-                      domain={["dataMin - 100", "dataMax + 100"]}
+                      domain={["dataMin - 5000", "dataMax + 5000"]}
                     />
                     <Tooltip
                       content={<CustomChartTooltip />}
@@ -390,7 +426,7 @@ export default function OverviewPage() {
                   <LineChart data={yearlyMetrics} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                     <XAxis dataKey="year" tickLine={false} axisLine={false} tick={{ fontSize: 12 }} />
-                    <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 12 }} domain={[0, "dataMax + 2"]} />
+                    <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 12 }} domain={[0, "dataMax + 500"]} />
                     <Tooltip
                       content={<CustomChartTooltip />}
                       cursor={{ stroke: "#666", strokeWidth: 1, strokeDasharray: "3 3" }}
@@ -449,7 +485,7 @@ export default function OverviewPage() {
                   <LineChart data={yearlyMetrics} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                     <XAxis dataKey="year" tickLine={false} axisLine={false} tick={{ fontSize: 12 }} />
-                    <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 12 }} domain={[0, "dataMax + 5"]} />
+                    <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 12 }} domain={["dataMin - 4000", "dataMax + 4000"]} />
                     <Tooltip
                       content={<CustomChartTooltip />}
                       cursor={{ stroke: "#666", strokeWidth: 1, strokeDasharray: "3 3" }}
@@ -490,7 +526,7 @@ export default function OverviewPage() {
                   <LineChart data={yearlyMetrics} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                     <XAxis dataKey="year" tickLine={false} axisLine={false} tick={{ fontSize: 12 }} />
-                    <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 12 }} domain={[0, "dataMax + 2"]} />
+                    <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 12 }} domain={["dataMin - 2000", "dataMax + 2000"]} />
                     <Tooltip
                       content={<CustomChartTooltip />}
                       cursor={{ stroke: "#666", strokeWidth: 1, strokeDasharray: "3 3" }}
@@ -510,14 +546,6 @@ export default function OverviewPage() {
               </ChartContainer>
             </CardContent>
           </Card>
-        </div>
-      )}
-
-      {/* Debug information - only show when there are issues */}
-      {debugInfo.length > 4 && (
-        <div className="mt-8 p-4 bg-muted rounded-lg">
-          <h3 className="font-medium mb-2">Informații de Depanare:</h3>
-          <pre className="text-xs overflow-auto whitespace-pre-wrap">{JSON.stringify(debugInfo, null, 2)}</pre>
         </div>
       )}
     </div>

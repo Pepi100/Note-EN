@@ -84,7 +84,7 @@ export function RomaniaMap({ selectedCounty, onCountySelect, availableCounties }
       <svg
         xmlns="http://www.w3.org/2000/svg"
         viewBox="0 0 612.36395 432.29416"
-        className="w-full h-auto border rounded-lg shadow-sm bg-background"
+        className="w-full h-auto rounded-lg shadow-sm bg-background"
         style={{ maxHeight: "500px" }}
       >
         {/* Alba */}

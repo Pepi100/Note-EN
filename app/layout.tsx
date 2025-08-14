@@ -4,6 +4,7 @@ import { Inter } from "next/font/google"
 import "./globals.css"
 import { Navbar } from "@/components/navbar"
 import { ThemeProvider } from "@/components/theme-provider" // Import ThemeProvider
+import { Analytics } from "@vercel/analytics/react"; //Vercel Analytics
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -26,6 +27,7 @@ export default function RootLayout({
           <Navbar />
           <main className="container mx-auto px-4 py-8">{children}</main>
         </ThemeProvider>
+        <Analytics /> {/* Vercel Analytics */}
       </body>
     </html>
   )

@@ -3,13 +3,14 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { ThemeToggle } from "./theme-toggle"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
-import { ChevronDown } from "lucide-react"
+import { ChevronDown, Moon, Sun } from "lucide-react" // Import Moon, Sun
+import { useTheme } from "next-themes" // Import useTheme
 
 export function Navbar() {
   const pathname = usePathname()
+  const { theme, setTheme } = useTheme() // Initialize useTheme
 
   const allYears = []
   for (let i = 2016; i <= 2025; i++) {
@@ -21,6 +22,14 @@ export function Navbar() {
   const dropdownYears = allYears
     .filter((year) => !visibleYears.includes(year))
     .sort((a, b) => Number.parseInt(b) - Number.parseInt(a)) // Sort descending for dropdown
+
+  const toggleTheme = () => {
+    if (theme === "dark") {
+      setTheme("light")
+    } else {
+      setTheme("dark")
+    }
+  }
 
   return (
     <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -67,7 +76,27 @@ export function Navbar() {
                 {year}
               </Link>
             ))}
-            <ThemeToggle />
+
+            {/* Link pentru Caută Școala Ta */}
+            <Link
+              href="/cauta-scoala"
+              className={cn(
+                "text-sm font-medium transition-colors hover:text-primary",
+                pathname === "/cauta-scoala" ? "text-primary" : "text-muted-foreground",
+              )}
+            >
+              Caută Școala Ta
+            </Link>
+
+            {/* Inlined ThemeToggle */}
+            <Button variant="ghost" size="icon" onClick={toggleTheme}>
+              {theme === "dark" ? (
+                <Moon className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all" />
+              ) : (
+                <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all" />
+              )}
+              <span className="sr-only">Toggle theme</span>
+            </Button>
           </div>
         </div>
       </div>

@@ -26,7 +26,25 @@ export interface StudentData {
   Medie_en: number // Media finală de admitere (media examenului național)
   Medie_5_8: number // Media generală a anilor V-VIII
   Admitere: number // Nota de admitere la liceu
+  Scoala?: string // Numele școlii (dacă este disponibil în CSV)
   [key: string]: any // Permite adăugarea altor coloane neprevăzute, pentru flexibilitate
+}
+
+/**
+ * @interface SchoolInfo
+ * @description Definește structura informațiilor despre o școală din fișierul CODURI SIIIR.csv
+ */
+export interface SchoolInfo {
+  Nr: string
+  Cod: string // Codul SIIIR care se potrivește cu SIIIR din datele studenților
+  Denumire: string // Numele complet al școlii
+  "Denumire scurta": string // Numele scurt al școlii
+  Localitate: string
+  "Localitate superioara": string
+  Judet: string
+  Statut: string
+  "Tip unitate": string
+  "Forma de proprietate": string
 }
 
 /**
@@ -45,6 +63,41 @@ export interface OverviewYearMetric {
   perfect10sMathematics: number // Numărul de note de 10 la Matematică
   totalContestations: number // Numărul total de contestații înregistrate
   totalAbsentees: number // Numărul total de studenți absenți la cel puțin o materie
+}
+
+/**
+ * @interface SchoolStats
+ * @description Definește structura statisticilor pentru o școală specifică.
+ */
+export interface SchoolStats {
+  schoolName: string
+  year: string
+  totalStudents: number
+  averageFinalGrade: number
+  passRate: number
+  perfect10sTotal: number
+  perfect10sRomanian: number
+  perfect10sMathematics: number
+  totalContestations: number
+  totalAbsentees: number
+  highestGrade: number
+  lowestGrade: number
+  gradeAverages: {
+    romanian: number
+    mathematics: number
+    nativeLanguage: number
+  }
+  absentStats: {
+    romanian: { count: number; percentage: number }
+    mathematics: { count: number; percentage: number }
+    nativeLanguage: { count: number; percentage: number; totalTaking: number }
+  }
+  contestations: {
+    total: number
+    increased: number
+    decreased: number
+  }
+  students: StudentData[]
 }
 
 /**
@@ -340,7 +393,7 @@ export function calculateDetailedStats(data: StudentData[]) {
         nativeLanguageGrades: [],
       },
       totalAbsenteesAnySubject: 0,
-      passRate: 0,
+      passRate: 0, // Adăugat noul câmp pentru rata de promovabilitate
     }
   }
 
@@ -509,8 +562,305 @@ export function calculateDetailedStats(data: StudentData[]) {
       nativeLanguageGrades,
     },
     totalAbsenteesAnySubject,
-    passRate,
+    passRate, // Adăugat noul câmp
   }
+}
+
+/**
+ * @function calculateSchoolStats
+ * @description Calculează statistici detaliate pentru o școală specifică într-un an dat.
+ * @param {StudentData[]} data - Un array de obiecte StudentData pentru o școală specifică.
+ * @param {string} schoolName - Numele școlii.
+ * @param {string} year - Anul pentru care se calculează statisticile.
+ * @returns {SchoolStats} - Un obiect cu statisticile calculate pentru școala respectivă.
+ */
+export function calculateSchoolStats(data: StudentData[], schoolName: string, year: string): SchoolStats {
+  if (!data || data.length === 0) {
+    return {
+      schoolName,
+      year,
+      totalStudents: 0,
+      averageFinalGrade: 0,
+      passRate: 0,
+      perfect10sTotal: 0,
+      perfect10sRomanian: 0,
+      perfect10sMathematics: 0,
+      totalContestations: 0,
+      totalAbsentees: 0,
+      highestGrade: 0,
+      lowestGrade: 0,
+      gradeAverages: {
+        romanian: 0,
+        mathematics: 0,
+        nativeLanguage: 0,
+      },
+      absentStats: {
+        romanian: { count: 0, percentage: 0 },
+        mathematics: { count: 0, percentage: 0 },
+        nativeLanguage: { count: 0, percentage: 0, totalTaking: 0 },
+      },
+      contestations: {
+        total: 0,
+        increased: 0,
+        decreased: 0,
+      },
+      students: [],
+    }
+  }
+
+  const totalStudents = data.length
+
+  // Calculează mediile pentru notele valide
+  const validFinalGrades = data.filter((student) => typeof student.Medie_en === "number" && student.Medie_en > 0)
+  const validRomanianGrades = data.filter((student) => typeof student.Fin_ro === "number" && student.Fin_ro > 0)
+  const validMathGrades = data.filter((student) => typeof student.Fin_mate === "number" && student.Fin_mate > 0)
+  const validNativeGrades = data.filter((student) => typeof student.Fin_lm === "number" && student.Fin_lm > 0)
+
+  const averageFinalGrade =
+    validFinalGrades.length > 0
+      ? validFinalGrades.reduce((sum, student) => sum + student.Medie_en, 0) / validFinalGrades.length
+      : 0
+
+  const averageRomanian =
+    validRomanianGrades.length > 0
+      ? validRomanianGrades.reduce((sum, student) => sum + (student.Fin_ro as number), 0) / validRomanianGrades.length
+      : 0
+
+  const averageMathematics =
+    validMathGrades.length > 0
+      ? validMathGrades.reduce((sum, student) => sum + (student.Fin_mate as number), 0) / validMathGrades.length
+      : 0
+
+  const averageNativeLanguage =
+    validNativeGrades.length > 0
+      ? validNativeGrades.reduce((sum, student) => sum + (student.Fin_lm as number), 0) / validNativeGrades.length
+      : 0
+
+  // Calculează nota cea mai mare și cea mai mică
+  const finalGrades = validFinalGrades.map((student) => student.Medie_en)
+  const highestGrade = finalGrades.length > 0 ? Math.max(...finalGrades) : 0
+  const lowestGrade = finalGrades.length > 0 ? Math.min(...finalGrades) : 0
+
+  // Calculează numărul de note de 10 perfecte
+  const perfect10sTotal = data.filter(
+    (student) => typeof student.Medie_en === "number" && student.Medie_en === 10,
+  ).length
+  const perfect10sRomanian = data.filter(
+    (student) => typeof student.Fin_ro === "number" && student.Fin_ro === 10,
+  ).length
+  const perfect10sMathematics = data.filter(
+    (student) => typeof student.Fin_mate === "number" && student.Fin_mate === 10,
+  ).length
+
+  // Calculează statisticile de absență
+  const romanianAbsent = data.filter((student) => student.Fin_ro === "-").length
+  const mathematicsAbsent = data.filter((student) => student.Fin_mate === "-").length
+  const studentsTakingNativeLanguage = data.filter((student) => student.Lb_mat !== "-").length
+  const nativeLanguageAbsent = data.filter((student) => student.Fin_lm === "-" && student.Lb_mat !== "-").length
+
+  let totalAbsenteesAnySubject = 0
+  data.forEach((student) => {
+    const isAbsentRomanian = student.Fin_ro === "-"
+    const isAbsentMathematics = student.Fin_mate === "-"
+    const isAbsentNativeLanguage = student.Fin_lm === "-" && student.Lb_mat !== "-"
+
+    if (isAbsentRomanian || isAbsentMathematics || isAbsentNativeLanguage) {
+      totalAbsenteesAnySubject++
+    }
+  })
+
+  // Calculează statisticile de contestații
+  let totalContestations = 0
+  let increasedContestations = 0
+  let decreasedContestations = 0
+
+  data.forEach((student) => {
+    // Verifică contestațiile pentru Română
+    if (student.Con_ro !== "-" && student.Con_ro !== "" && student.Con_ro != null) {
+      totalContestations++
+      const initialRo = typeof student.Nota_ro === "number" ? student.Nota_ro : 0
+      const finalRo = typeof student.Fin_ro === "number" ? student.Fin_ro : 0
+      if (finalRo > 0 && initialRo > 0) {
+        if (finalRo > initialRo) {
+          increasedContestations++
+        } else if (finalRo < initialRo) {
+          decreasedContestations++
+        }
+      }
+    }
+
+    // Verifică contestațiile pentru Matematică
+    if (student.Con_mate !== "-" && student.Con_mate !== "" && student.Con_mate != null) {
+      totalContestations++
+      const initialMate = typeof student.Nota_mate === "number" ? student.Nota_mate : 0
+      const finalMate = typeof student.Fin_mate === "number" ? student.Fin_mate : 0
+      if (finalMate > 0 && initialMate > 0) {
+        if (finalMate > initialMate) {
+          increasedContestations++
+        } else if (finalMate < initialMate) {
+          decreasedContestations++
+        }
+      }
+    }
+
+    // Verifică contestațiile pentru Limba Maternă
+    if (student.Con_lm !== "-" && student.Con_lm !== "" && student.Con_lm != null) {
+      totalContestations++
+      const initialLm = typeof student.Nota_lm === "number" ? student.Nota_lm : 0
+      const finalLm = typeof student.Fin_lm === "number" ? student.Fin_lm : 0
+      if (finalLm > 0 && initialLm > 0) {
+        if (finalLm > initialLm) {
+          increasedContestations++
+        } else if (finalLm < initialLm) {
+          decreasedContestations++
+        }
+      }
+    }
+  })
+
+  // Calculează rata de promovabilitate
+  let promotedStudents = 0
+  data.forEach((student) => {
+    const finalGrade = typeof student.Medie_en === "number" ? student.Medie_en : 0
+    const finalRo = typeof student.Fin_ro === "number" ? student.Fin_ro : 0
+    const finalMate = typeof student.Fin_mate === "number" ? student.Fin_mate : 0
+    const finalLm = typeof student.Fin_lm === "number" ? student.Fin_lm : 0
+
+    // Criterii de promovare
+    const passedOverall = finalGrade >= 5
+    const passedRomanian = finalRo >= 5
+    const passedMathematics = finalMate >= 5
+
+    let passedNativeLanguage = true
+    if (student.Lb_mat !== "-") {
+      passedNativeLanguage = finalLm >= 5
+    }
+
+    if (passedOverall && passedRomanian && passedMathematics && passedNativeLanguage) {
+      promotedStudents++
+    }
+  })
+
+  const passRate = totalStudents > 0 ? (promotedStudents / totalStudents) * 100 : 0
+
+  return {
+    schoolName,
+    year,
+    totalStudents,
+    averageFinalGrade,
+    passRate,
+    perfect10sTotal,
+    perfect10sRomanian,
+    perfect10sMathematics,
+    totalContestations,
+    totalAbsentees: totalAbsenteesAnySubject,
+    highestGrade,
+    lowestGrade,
+    gradeAverages: {
+      romanian: averageRomanian,
+      mathematics: averageMathematics,
+      nativeLanguage: averageNativeLanguage,
+    },
+    absentStats: {
+      romanian: {
+        count: romanianAbsent,
+        percentage: totalStudents > 0 ? (romanianAbsent / totalStudents) * 100 : 0,
+      },
+      mathematics: {
+        count: mathematicsAbsent,
+        percentage: totalStudents > 0 ? (mathematicsAbsent / totalStudents) * 100 : 0,
+      },
+      nativeLanguage: {
+        count: nativeLanguageAbsent,
+        percentage: studentsTakingNativeLanguage > 0 ? (nativeLanguageAbsent / studentsTakingNativeLanguage) * 100 : 0,
+        totalTaking: studentsTakingNativeLanguage,
+      },
+    },
+    contestations: {
+      total: totalContestations,
+      increased: increasedContestations,
+      decreased: decreasedContestations,
+    },
+    students: data,
+  }
+}
+
+/**
+ * @function parseSchoolsCSV
+ * @description Parsează fișierul CODURI SIIIR.csv pentru a obține informațiile despre școli.
+ * @returns {Promise<SchoolInfo[]>} - O promisiune care se rezolvă cu un array de obiecte SchoolInfo.
+ */
+export async function parseSchoolsCSV(): Promise<SchoolInfo[]> {
+  try {
+    const fullPath = getAssetPath("/scoli.csv") // Schimbat calea aici
+    console.log(`Attempting to fetch schools: ${fullPath}`)
+
+    const response = await fetch(fullPath, {
+      headers: {
+        Accept: "text/csv,text/plain,*/*",
+      },
+    })
+
+    if (!response.ok) {
+      console.error(`Failed to fetch ${fullPath}: ${response.status} ${response.statusText}`)
+      throw new Error(`Failed to fetch ${fullPath}: ${response.status} ${response.statusText}`)
+    }
+
+    const csvText = await response.text()
+    console.log(`Schools CSV text length: ${csvText.length}`)
+
+    if (csvText.length === 0) {
+      throw new Error(`Schools CSV file is empty`)
+    }
+
+    return new Promise((resolve, reject) => {
+      Papa.parse(csvText, {
+        header: true,
+        skipEmptyLines: true,
+        dynamicTyping: false,
+        complete: (results: Papa.ParseResult<SchoolInfo>) => {
+          if (results.errors.length > 0) {
+            console.warn("Schools CSV parsing warnings:", results.errors)
+          }
+          console.log(`Parsed ${results.data.length} schools`)
+          resolve(results.data || [])
+        },
+        error: (error: Error) => {
+          console.error("Schools CSV parsing error:", error)
+          reject(error)
+        },
+      })
+    })
+  } catch (error) {
+    console.error(`Error parsing schools CSV:`, error)
+    throw error
+  }
+}
+
+/**
+ * @function getSchoolsForCounty
+ * @description Extrage școlile pentru un județ specific din lista de școli.
+ * @param {SchoolInfo[]} schools - Lista tuturor școlilor.
+ * @param {string} county - Codul județului.
+ * @returns {SchoolInfo[]} - Un array de școli pentru județul specificat.
+ */
+export function getSchoolsForCounty(schools: SchoolInfo[], county: string): SchoolInfo[] {
+  if (!schools || schools.length === 0) return []
+
+  return schools.filter((school) => school.Judet === county).sort((a, b) => a.Denumire.localeCompare(b.Denumire))
+}
+
+/**
+ * @function getStudentsForSchool
+ * @description Extrage studenții pentru o școală specifică pe baza codului SIIIR.
+ * @param {StudentData[]} students - Lista tuturor studenților.
+ * @param {string} schoolCode - Codul SIIIR al școlii.
+ * @returns {StudentData[]} - Un array de studenți pentru școala specificată.
+ */
+export function getStudentsForSchool(students: StudentData[], schoolCode: string): StudentData[] {
+  if (!students || students.length === 0) return []
+
+  return students.filter((student) => student.SIIIR === schoolCode)
 }
 
 /**

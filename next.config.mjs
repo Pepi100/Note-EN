@@ -1,11 +1,5 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'export',
-  trailingSlash: true,
-  skipTrailingSlashRedirect: true,
-  distDir: 'out',
-  basePath: process.env.NODE_ENV === 'production' ? '/Note-EN' : '',
-  assetPrefix: process.env.NODE_ENV === 'production' ? '/Note-EN/' : '',
   eslint: {
     ignoreDuringBuilds: true,
   },
@@ -13,10 +7,11 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   images: {
-    unoptimized: true,
+    // Allow Next.js image optimization (remove `unoptimized: true`)
+    // If you use remote images, add domains or remotePatterns here
   },
   experimental: {
-    esmExternals: 'loose'
+    esmExternals: 'loose',
   },
   webpack: (config) => {
     config.resolve.fallback = {
@@ -24,9 +19,9 @@ const nextConfig = {
       fs: false,
       path: false,
       os: false,
-    }
-    return config
-  }
-}
+    };
+    return config;
+  },
+};
 
-export default nextConfig
+export default nextConfig;

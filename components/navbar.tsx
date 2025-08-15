@@ -88,6 +88,17 @@ export function Navbar() {
               Caută Școala Ta
             </Link>
 
+            {/* Link pentru Găsește-ți Locul */}
+            <Link
+              href="/gaseste-locul"
+              className={cn(
+                "text-sm font-medium transition-colors hover:text-primary",
+                pathname === "/gaseste-locul" ? "text-primary" : "text-muted-foreground",
+              )}
+            >
+              Găsește-ți Locul
+            </Link>
+
             {/* Inlined ThemeToggle */}
             <Button variant="ghost" size="icon" onClick={toggleTheme}>
               {theme === "dark" ? (

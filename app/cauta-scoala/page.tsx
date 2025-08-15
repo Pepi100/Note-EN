@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { GradeHistogram } from "@/components/grade-histogram"
 import {
   parseCSV,
   parseSchoolsCSV,
@@ -434,6 +435,82 @@ export default function CautaScoalaPage() {
             </CardContent>
           </Card>
 
+          {/* Histograme pentru distribuția notelor */}
+          <div className="grid gap-6 lg:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>Distribuția Notelor Finale</CardTitle>
+                <CardDescription>
+                  Medie: {schoolStats.averageFinalGrade > 0 ? schoolStats.averageFinalGrade.toFixed(2) : "N/A"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <GradeHistogram
+                  data={schoolStats.students
+                    .filter((student) => typeof student.Medie_en === "number" && student.Medie_en > 0)
+                    .map((student) => student.Medie_en)}
+                  title="Note Finale"
+                />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Distribuția Notelor la Română</CardTitle>
+                <CardDescription>
+                  Medie:{" "}
+                  {schoolStats.gradeAverages.romanian > 0 ? schoolStats.gradeAverages.romanian.toFixed(2) : "N/A"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <GradeHistogram
+                  data={schoolStats.students
+                    .filter((student) => typeof student.Fin_ro === "number" && student.Fin_ro > 0)
+                    .map((student) => student.Fin_ro as number)}
+                  title="Note Română"
+                />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Distribuția Notelor la Matematică</CardTitle>
+                <CardDescription>
+                  Medie:{" "}
+                  {schoolStats.gradeAverages.mathematics > 0 ? schoolStats.gradeAverages.mathematics.toFixed(2) : "N/A"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <GradeHistogram
+                  data={schoolStats.students
+                    .filter((student) => typeof student.Fin_mate === "number" && student.Fin_mate > 0)
+                    .map((student) => student.Fin_mate as number)}
+                  title="Note Matematică"
+                />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Distribuția Notelor la Limba Maternă</CardTitle>
+                <CardDescription>
+                  Medie:{" "}
+                  {schoolStats.gradeAverages.nativeLanguage > 0
+                    ? schoolStats.gradeAverages.nativeLanguage.toFixed(2)
+                    : "N/A"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <GradeHistogram
+                  data={schoolStats.students
+                    .filter((student) => typeof student.Fin_lm === "number" && student.Fin_lm > 0)
+                    .map((student) => student.Fin_lm as number)}
+                  title="Note Limba Maternă"
+                />
+              </CardContent>
+            </Card>
+          </div>
+
           {/* Tabel cu toți studenții */}
           <Card>
             <CardHeader>
@@ -452,56 +529,62 @@ export default function CautaScoalaPage() {
                       <TableHead>Nota Română</TableHead>
                       <TableHead>Nota Matematică</TableHead>
                       <TableHead>Limba Maternă</TableHead>
-                      <TableHead>Nota LM</TableHead>
+                      <TableHead>Nota Limba Maternă</TableHead>
                       <TableHead>Status</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {schoolStats.students.map((student, index) => {
-                      // Determină statusul de promovare
-                      const finalGrade = typeof student.Medie_en === "number" ? student.Medie_en : 0
-                      const finalRo = typeof student.Fin_ro === "number" ? student.Fin_ro : 0
-                      const finalMate = typeof student.Fin_mate === "number" ? student.Fin_mate : 0
-                      const finalLm = typeof student.Fin_lm === "number" ? student.Fin_lm : 0
+                    {schoolStats.students
+                      .sort((a, b) => {
+                        const gradeA = typeof a.Medie_en === "number" ? a.Medie_en : 0
+                        const gradeB = typeof b.Medie_en === "number" ? b.Medie_en : 0
+                        return gradeB - gradeA // Sortare descrescătoare
+                      })
+                      .map((student, index) => {
+                        // Determină statusul de promovare
+                        const finalGrade = typeof student.Medie_en === "number" ? student.Medie_en : 0
+                        const finalRo = typeof student.Fin_ro === "number" ? student.Fin_ro : 0
+                        const finalMate = typeof student.Fin_mate === "number" ? student.Fin_mate : 0
+                        const finalLm = typeof student.Fin_lm === "number" ? student.Fin_lm : 0
 
-                      const passedOverall = finalGrade >= 5
-                      const passedRomanian = finalRo >= 5
-                      const passedMathematics = finalMate >= 5
-                      let passedNativeLanguage = true
-                      if (student.Lb_mat !== "-") {
-                        passedNativeLanguage = finalLm >= 5
-                      }
+                        const passedOverall = finalGrade >= 5
+                        const passedRomanian = finalRo >= 5
+                        const passedMathematics = finalMate >= 5
+                        let passedNativeLanguage = true
+                        if (student.Lb_mat !== "-") {
+                          passedNativeLanguage = finalLm >= 5
+                        }
 
-                      const isPromoted = passedOverall && passedRomanian && passedMathematics && passedNativeLanguage
+                        const isPromoted = passedOverall && passedRomanian && passedMathematics && passedNativeLanguage
 
-                      return (
-                        <TableRow key={index}>
-                          <TableCell className="font-mono text-xs">{student.Cod}</TableCell>
-                          <TableCell>{student.Sex}</TableCell>
-                          <TableCell>{student.Mediu}</TableCell>
-                          <TableCell className="font-semibold">
-                            {finalGrade > 0 ? finalGrade.toFixed(2) : "N/A"}
-                          </TableCell>
-                          <TableCell>{student.Fin_ro === "-" ? "Absent" : finalRo.toFixed(2)}</TableCell>
-                          <TableCell>{student.Fin_mate === "-" ? "Absent" : finalMate.toFixed(2)}</TableCell>
-                          <TableCell>{student.Lb_mat === "-" ? "N/A" : student.Lb_mat}</TableCell>
-                          <TableCell>
-                            {student.Lb_mat === "-" ? "N/A" : student.Fin_lm === "-" ? "Absent" : finalLm.toFixed(2)}
-                          </TableCell>
-                          <TableCell>
-                            <span
-                              className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                isPromoted
-                                  ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                                  : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
-                              }`}
-                            >
-                              {isPromoted ? "Promovat" : "Nepromovat"}
-                            </span>
-                          </TableCell>
-                        </TableRow>
-                      )
-                    })}
+                        return (
+                          <TableRow key={index}>
+                            <TableCell className="font-mono text-xs">{student.Cod}</TableCell>
+                            <TableCell>{student.Sex}</TableCell>
+                            <TableCell>{student.Mediu}</TableCell>
+                            <TableCell className="font-semibold">
+                              {finalGrade > 0 ? finalGrade.toFixed(2) : "N/A"}
+                            </TableCell>
+                            <TableCell>{student.Fin_ro === "-" ? "Absent" : finalRo.toFixed(2)}</TableCell>
+                            <TableCell>{student.Fin_mate === "-" ? "Absent" : finalMate.toFixed(2)}</TableCell>
+                            <TableCell>{student.Lb_mat === "-" ? "N/A" : student.Lb_mat}</TableCell>
+                            <TableCell>
+                              {student.Lb_mat === "-" ? "N/A" : student.Fin_lm === "-" ? "Absent" : finalLm.toFixed(2)}
+                            </TableCell>
+                            <TableCell>
+                              <span
+                                className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                  isPromoted
+                                    ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                                    : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
+                                }`}
+                              >
+                                {isPromoted ? "Promovat" : "Nepromovat"}
+                              </span>
+                            </TableCell>
+                          </TableRow>
+                        )
+                      })}
                   </TableBody>
                 </Table>
               </div>

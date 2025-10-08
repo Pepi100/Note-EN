@@ -1,5 +1,7 @@
 import Papa from "papaparse"
 import { getAssetPath } from "./path-utils" // Assuming path-utils is the file where getAssetPath is declared
+import { COUNTY_NAME_TO_ABBR, removeRomanianDiacritics } from "./utils"
+
 
 /**
  * @interface StudentData
@@ -847,7 +849,7 @@ export async function parseSchoolsCSV(): Promise<SchoolInfo[]> {
 export function getSchoolsForCounty(schools: SchoolInfo[], county: string): SchoolInfo[] {
   if (!schools || schools.length === 0) return []
 
-  return schools.filter((school) => school.Judet === county).sort((a, b) => a.Denumire.localeCompare(b.Denumire))
+  return schools.filter((school) => COUNTY_NAME_TO_ABBR[removeRomanianDiacritics(school.Judet)] === county).sort((a, b) => a.Denumire.localeCompare(b.Denumire))
 }
 
 /**

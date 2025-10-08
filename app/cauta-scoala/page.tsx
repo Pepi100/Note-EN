@@ -19,6 +19,7 @@ import {
 } from "@/lib/data-utils"
 import { RomaniaMap } from "@/components/romania-map"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { removeRomanianDiacritics } from "@/lib/utils"
 
 export default function CautaScoalaPage() {
   // Stochează toate datele brute, organizate pe ani
@@ -47,7 +48,7 @@ export default function CautaScoalaPage() {
   const [error, setError] = useState<string | null>(null)
 
   // Lista anilor disponibili
-  const availableYears = []
+  const availableYears: string[] = []
   for (let i = 2016; i <= 2025; i++) {
     availableYears.push(i.toString())
   }
@@ -101,8 +102,8 @@ export default function CautaScoalaPage() {
   // Actualizează lista de școli când se schimbă județul
   useEffect(() => {
     if (selectedCounty && allSchools.length > 0) {
-      // const schools = getSchoolsForCounty(allSchools, selectedCounty)
-      const schools = allSchools
+      const schools = getSchoolsForCounty(allSchools, selectedCounty)
+      // const schools = allSchools
       setSchoolsForCounty(schools)
       setSelectedSchool(null)
       setSchoolSearchTerm("")
@@ -119,7 +120,7 @@ export default function CautaScoalaPage() {
   useEffect(() => {
     if (schoolSearchTerm.length >= 2) {
       const filtered = schoolsForCounty.filter((school) =>
-        school.Denumire.toLowerCase().includes(schoolSearchTerm.toLowerCase()),
+        removeRomanianDiacritics(school.Denumire).toLowerCase().includes(removeRomanianDiacritics(schoolSearchTerm).toLowerCase()),
       )
       setFilteredSchools(filtered.slice(0, 10)) // Limitează la 10 sugestii
     } else {

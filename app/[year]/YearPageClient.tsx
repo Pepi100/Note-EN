@@ -13,6 +13,8 @@ import {
 import { GradeHistogram } from "@/components/grade-histogram"
 import { RomaniaMap } from "@/components/romania-map"
 import { Button } from "@/components/ui/button"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+
 
 // Interfață pentru statisticile detaliate calculate de `calculateDetailedStats`
 interface DetailedStats {
@@ -261,9 +263,19 @@ export default function YearPageClient({ year }: YearPageClientProps) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.contestations.total}</div>
-            <div className="text-xs text-muted-foreground mt-1">
-              +{stats.contestations.increased} / -{stats.contestations.decreased}
-            </div>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    +{stats.contestations.increased} / -{stats.contestations.decreased}
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  Numarul contestatiilor pentru care nota a crescut, respectiv scazut.
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            
           </CardContent>
         </Card>
 

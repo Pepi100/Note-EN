@@ -151,7 +151,7 @@ judete_short_long = {
 }
 
 # SIIR
-siir_DF = pd.read_csv(r"csv\CODURI SIIIR.csv")
+siir_DF = pd.read_csv(r"csv\scoli.csv")
 unknown = []
 
 def SIIR_to_judet(code):
@@ -332,10 +332,10 @@ def xlsx_to_final(year, p):
 
 
 
-# year = 2017
-# xlsx_to_csv(f"csv\{year}.ods",f"csv\{year}.csv")
+year = 2025
+# xlsx_to_csv(f"csv\{year}.xlsx",f"csv\{year}.csv")
 # clean_csv(f"csv\{year}.csv")
-# transform_exam_csv(f"csv\{year}.csv", f"public\{year}.csv", 0.2)
+transform_exam_csv(f"csv\{year}.csv", f"public\{year}.csv", 0)
 
 # print(unknown)
 # print(len(unknown))
@@ -376,6 +376,6 @@ def transform_csv(input_path, output_path):
     # Save to CSV
     df_out.to_csv(output_path, index=False)
 
-# Usage:
-year = 2025
-transform_csv(f"csv\{year}.csv", f"public\{year}.csv")
+# # Usage:
+# year = 2025
+# transform_csv(f"csv\{year}.csv", f"public\{year}.csv")

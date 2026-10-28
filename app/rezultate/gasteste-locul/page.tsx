@@ -76,7 +76,9 @@ export default function GasesteLoculPage() {
       return
     }
 
-    const averageGrade = Number((grades.reduce((sum, grade) => sum + grade, 0) / grades.length).toFixed(2))
+    const averageGrade = Math.floor(
+      grades.reduce((sum, grade) => sum + Math.round(grade * 100), 0) / grades.length,
+    ) / 100
     setSearching(true)
     try {
       const positions = await findStudentRank(`/${selectedYear}.csv`, selectedCounty, averageGrade)

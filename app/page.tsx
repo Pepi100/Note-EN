@@ -10,6 +10,25 @@ import { CustomChartTooltip } from "@/components/custom-chart-tooltip" // Re-imp
 import { RomaniaMap } from "@/components/romania-map"
 import { Button } from "@/components/ui/button"
 import { fetchGeneratedData, type GeneratedOverviewData } from "@/lib/generated-data"
+import type { OverviewYearMetric } from "@/lib/data-utils"
+
+function getYAxisDomain(
+  metrics: OverviewYearMetric[],
+  keys: Array<keyof OverviewYearMetric>,
+): [number, number] {
+  const values = metrics
+    .flatMap((metric) => keys.map((key) => metric[key]))
+    .filter((value): value is number => typeof value === "number" && Number.isFinite(value))
+
+  if (values.length === 0) return [0, 1]
+
+  const minimum = Math.min(...values)
+  const maximum = Math.max(...values)
+  const lowerBound = Math.max(0, minimum * 0.75)
+  const upperBound = maximum * 1.25
+
+  return [lowerBound, upperBound > lowerBound ? upperBound : lowerBound + 1]
+}
 
 export default function OverviewPage() {
   const [overviewData, setOverviewData] = useState<GeneratedOverviewData | null>(null)
@@ -190,7 +209,8 @@ export default function OverviewPage() {
                       tickLine={false}
                       axisLine={false}
                       tick={{ fontSize: 12 }}
-                      domain={["dataMin - 5000", "dataMax + 5000"]}
+                      domain={getYAxisDomain(yearlyMetrics, ["totalStudents"])}
+                      allowDecimals={false}
                     />
                     <Tooltip
                       content={<CustomChartTooltip />}
@@ -240,7 +260,16 @@ export default function OverviewPage() {
                   <LineChart data={yearlyMetrics} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                     <XAxis dataKey="year" tickLine={false} axisLine={false} tick={{ fontSize: 12 }} />
-                    <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 12 }} domain={[5, 8]} />
+                    <YAxis
+                      tickLine={false}
+                      axisLine={false}
+                      tick={{ fontSize: 12 }}
+                      domain={getYAxisDomain(yearlyMetrics, [
+                        "averageFinalGrade",
+                        "averageRomanian",
+                        "averageMathematics",
+                      ])}
+                    />
                     <Tooltip
                       content={<CustomChartTooltip />}
                       cursor={{ stroke: "#666", strokeWidth: 1, strokeDasharray: "3 3" }}
@@ -307,7 +336,17 @@ export default function OverviewPage() {
                   <LineChart data={yearlyMetrics} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                     <XAxis dataKey="year" tickLine={false} axisLine={false} tick={{ fontSize: 12 }} />
-                    <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 12 }} domain={[0, "dataMax + 500"]} />
+                    <YAxis
+                      tickLine={false}
+                      axisLine={false}
+                      tick={{ fontSize: 12 }}
+                      domain={getYAxisDomain(yearlyMetrics, [
+                        "perfect10sTotal",
+                        "perfect10sRomanian",
+                        "perfect10sMathematics",
+                      ])}
+                      allowDecimals={false}
+                    />
                     <Tooltip
                       content={<CustomChartTooltip />}
                       cursor={{ stroke: "#666", strokeWidth: 1, strokeDasharray: "3 3" }}
@@ -366,7 +405,13 @@ export default function OverviewPage() {
                   <LineChart data={yearlyMetrics} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                     <XAxis dataKey="year" tickLine={false} axisLine={false} tick={{ fontSize: 12 }} />
-                    <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 12 }} domain={["dataMin - 4000", "dataMax + 4000"]} />
+                    <YAxis
+                      tickLine={false}
+                      axisLine={false}
+                      tick={{ fontSize: 12 }}
+                      domain={getYAxisDomain(yearlyMetrics, ["totalContestations"])}
+                      allowDecimals={false}
+                    />
                     <Tooltip
                       content={<CustomChartTooltip />}
                       cursor={{ stroke: "#666", strokeWidth: 1, strokeDasharray: "3 3" }}
@@ -407,7 +452,13 @@ export default function OverviewPage() {
                   <LineChart data={yearlyMetrics} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                     <XAxis dataKey="year" tickLine={false} axisLine={false} tick={{ fontSize: 12 }} />
-                    <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 12 }} domain={["dataMin - 2000", "dataMax + 2000"]} />
+                    <YAxis
+                      tickLine={false}
+                      axisLine={false}
+                      tick={{ fontSize: 12 }}
+                      domain={getYAxisDomain(yearlyMetrics, ["totalAbsentees"])}
+                      allowDecimals={false}
+                    />
                     <Tooltip
                       content={<CustomChartTooltip />}
                       cursor={{ stroke: "#666", strokeWidth: 1, strokeDasharray: "3 3" }}

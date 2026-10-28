@@ -90,10 +90,10 @@ export function Navbar() {
 
             {/* Link pentru Găsește-ți Locul */}
             <Link
-              href="/gaseste-locul"
+              href="/gasteste-locul"
               className={cn(
                 "text-sm font-medium transition-colors hover:text-primary",
-                pathname === "/gaseste-locul" ? "text-primary" : "text-muted-foreground",
+                pathname === "/gasteste-locul" ? "text-primary" : "text-muted-foreground",
               )}
             >
               Găsește-ți Locul

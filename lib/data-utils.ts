@@ -253,6 +253,59 @@ export function parseStudentsForSchool(filePath: string, schoolCode: string): Pr
   })
 }
 
+export interface StudentRankPositions {
+  countyPosition: number
+  overallPosition: number
+}
+
+export function findStudentRank(
+  filePath: string,
+  county: string,
+  averageGrade: number,
+): Promise<StudentRankPositions> {
+  const fullPath = getAssetPath(filePath)
+  return new Promise((resolve, reject) => {
+    let studentsAheadInCounty = 0
+    let studentsAheadOverall = 0
+    let settled = false
+
+    Papa.parse<Record<string, string>>(fullPath, {
+      download: true,
+      header: true,
+      skipEmptyLines: true,
+      step: (result, parser) => {
+        if (result.errors.length > 0) {
+          settled = true
+          parser.abort()
+          reject(new Error(`Unable to parse ${fullPath}: ${result.errors[0].message}`))
+          return
+        }
+
+        const row = result.data
+        const grade = Number.parseFloat(row.Medie_en ?? "")
+        if (!Number.isFinite(grade) || grade <= averageGrade) return
+
+        studentsAheadOverall++
+        if (row.Judet === county) studentsAheadInCounty++
+      },
+      complete: () => {
+        if (!settled) {
+          resolve({
+            countyPosition: studentsAheadInCounty + 1,
+            overallPosition: studentsAheadOverall + 1,
+          })
+        }
+      },
+      error: (error) => {
+        if (!settled) {
+          settled = true
+          reject(error)
+        }
+      },
+    })
+  })
+}
+
 /**
  * @function calculateYearStats
  * @deprecated Această funcție a fost utilizată anterior pentru statisticile simplificate din pagina de overview.

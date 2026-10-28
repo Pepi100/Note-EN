@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { parseCSV, getUniqueCounties } from "@/lib/data-utils"
+import { fetchGeneratedData, type GeneratedDataIndex } from "@/lib/generated-data"
 
 export default function GasesteLoculPage() {
   // State pentru inputurile utilizatorului
@@ -13,39 +13,32 @@ export default function GasesteLoculPage() {
   const [notaMatematica, setNotaMatematica] = useState<string>("")
   const [notaLimbaMaterna, setNotaLimbaMaterna] = useState<string>("")
   const [selectedCounty, setSelectedCounty] = useState<string>("")
-  const [selectedYear, setSelectedYear] = useState<string>("2025")
+  const [selectedYear, setSelectedYear] = useState<string>("")
 
-  // State pentru datele încărcate
+  const [dataIndex, setDataIndex] = useState<GeneratedDataIndex | null>(null)
   const [counties, setCounties] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Lista anilor disponibili
-  const availableYears = []
-  for (let i = 2016; i <= 2025; i++) {
-    availableYears.push(i.toString())
-  }
-  availableYears.reverse() // Cel mai recent an primul
+  const availableYears = dataIndex?.years.slice().reverse() ?? []
 
-  // Încarcă datele pentru a obține lista de județe
   useEffect(() => {
-    const loadCounties = async () => {
+    const loadIndex = async () => {
       try {
-        setLoading(true)
-        setError(null)
-
-        // Încarcă datele pentru anul 2025 pentru a obține județele
-        const data = await parseCSV("/2025.csv")
-        setCounties(getUniqueCounties(data))
+        const index = await fetchGeneratedData<GeneratedDataIndex>("/generated/index.json")
+        setDataIndex(index)
+        const latestYear = index.years.at(-1)
+        setCounties(latestYear ? index.countiesByYear[latestYear] ?? [] : [])
+        setSelectedYear(latestYear ?? "")
       } catch (error) {
-        console.error("Eroare la încărcarea datelor:", error)
-        setError("Nu s-au putut încărca datele pentru județe.")
+        console.error("Unable to load the generated data index:", error)
+        setError("Nu s-au putut încărca județele disponibile.")
       } finally {
         setLoading(false)
       }
     }
 
-    loadCounties()
+    loadIndex()
   }, [])
 
   // Funcție pentru validarea și formatarea notelor

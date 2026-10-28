@@ -6,97 +6,52 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { GradeHistogram } from "@/components/grade-histogram"
-import {
-  parseCSV,
-  parseSchoolsCSV,
-  getUniqueCounties,
-  getSchoolsForCounty,
-  getStudentsForSchool,
-  calculateSchoolStats,
-  type StudentData,
-  type SchoolInfo,
-  type SchoolStats,
-} from "@/lib/data-utils"
+import { calculateSchoolStats, getSchoolsForCounty, type StudentData, type SchoolStats } from "@/lib/data-utils"
 import { RomaniaMap } from "@/components/romania-map"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { removeRomanianDiacritics } from "@/lib/utils"
+import { fetchGeneratedData, type GeneratedDataIndex, type SchoolDirectoryEntry } from "@/lib/generated-data"
+import { getAssetPath } from "@/lib/path-utils"
 
 export default function CautaScoalaPage() {
-  // Stochează toate datele brute, organizate pe ani
-  const [allDataByYear, setAllDataByYear] = useState<Record<string, StudentData[]>>({})
-  // Stochează informațiile despre toate școlile
-  const [allSchools, setAllSchools] = useState<SchoolInfo[]>([])
-  // Stochează lista de județe unice disponibile
+  const [allSchools, setAllSchools] = useState<SchoolDirectoryEntry[]>([])
   const [counties, setCounties] = useState<string[]>([])
-  // Stochează lista de școli pentru județul selectat
-  const [schoolsForCounty, setSchoolsForCounty] = useState<SchoolInfo[]>([])
-  // Stochează județul selectat curent
+  const [dataIndex, setDataIndex] = useState<GeneratedDataIndex | null>(null)
+  const [schoolsForCounty, setSchoolsForCounty] = useState<SchoolDirectoryEntry[]>([])
   const [selectedCounty, setSelectedCounty] = useState<string>("")
-  // Stochează școala selectată curent
-  const [selectedSchool, setSelectedSchool] = useState<SchoolInfo | null>(null)
-  // Stochează anul selectat curent
-  const [selectedYear, setSelectedYear] = useState<string>("2025")
-  // Stochează termenul de căutare pentru școală
+  const [selectedSchool, setSelectedSchool] = useState<SchoolDirectoryEntry | null>(null)
+  const [selectedYear, setSelectedYear] = useState<string>("")
   const [schoolSearchTerm, setSchoolSearchTerm] = useState<string>("")
-  // Stochează școlile filtrate pentru dropdown
-  const [filteredSchools, setFilteredSchools] = useState<SchoolInfo[]>([])
-  // Stochează statisticile pentru școala selectată
+  const [filteredSchools, setFilteredSchools] = useState<SchoolDirectoryEntry[]>([])
   const [schoolStats, setSchoolStats] = useState<SchoolStats | null>(null)
-  // Stare pentru încărcare
   const [loading, setLoading] = useState(true)
-  // Stare pentru erori
   const [error, setError] = useState<string | null>(null)
+  const [loadingSchoolStats, setLoadingSchoolStats] = useState(false)
+  const [schoolStatsError, setSchoolStatsError] = useState<string | null>(null)
+  const availableYears = dataIndex?.years.slice().reverse() ?? []
 
-  // Lista anilor disponibili
-  const availableYears: string[] = []
-  for (let i = 2016; i <= 2025; i++) {
-    availableYears.push(i.toString())
-  }
-  availableYears.reverse() // Cel mai recent an primul
-
-  // Încarcă toate datele la montarea componentei
   useEffect(() => {
-    const loadAllData = async () => {
+    const loadDirectory = async () => {
       try {
         setLoading(true)
         setError(null)
-
-        // Încarcă datele despre școli
-        console.log("Loading schools data...")
-        const schoolsData = await parseSchoolsCSV()
-        setAllSchools(schoolsData)
-
-        // Încarcă datele studenților pentru toți anii
-        const loadedData: Record<string, StudentData[]> = {}
-        let allStudents: StudentData[] = []
-
-        for (const year of availableYears) {
-          try {
-            const data = await parseCSV(`/${year}.csv`)
-            loadedData[year] = data
-            allStudents = allStudents.concat(data)
-          } catch (error) {
-            console.error(`Eroare la încărcarea datelor pentru ${year}:`, error)
-            loadedData[year] = []
-          }
-        }
-
-        setAllDataByYear(loadedData)
-        setCounties(getUniqueCounties(allStudents))
-
-        const hasValidData = Object.values(loadedData).some((dataArray) => dataArray.length > 0)
-        if (!hasValidData) {
-          setError("Nu s-au găsit date valide în fișierele CSV.")
-        }
+        const [index, schools] = await Promise.all([
+          fetchGeneratedData<GeneratedDataIndex>("/generated/index.json"),
+          fetchGeneratedData<SchoolDirectoryEntry[]>("/generated/schools.json"),
+        ])
+        setDataIndex(index)
+        setCounties(index.counties)
+        setSelectedYear(index.years.at(-1) ?? "")
+        setAllSchools(schools)
       } catch (error) {
-        console.error("Eroare la încărcarea datelor:", error)
-        setError("Nu s-au putut încărca datele. Verificați dacă fișierul CODURI SIIIR.csv este disponibil.")
+        console.error("Unable to load the school directory:", error)
+        setError("Nu s-au putut încărca datele școlilor. Verificați dacă datele generate sunt disponibile.")
       } finally {
         setLoading(false)
       }
     }
 
-    loadAllData()
+    loadDirectory()
   }, [])
 
   // Actualizează lista de școli când se schimbă județul
@@ -128,70 +83,44 @@ export default function CautaScoalaPage() {
     }
   }, [schoolSearchTerm, schoolsForCounty])
 
-  // Calculează statisticile pentru școala selectată
   useEffect(() => {
-    console.log("Calculating school stats...", {
-      selectedSchool: selectedSchool?.Denumire,
-      selectedYear,
-      hasYearData: !!allDataByYear[selectedYear],
-      yearDataLength: allDataByYear[selectedYear]?.length || 0,
-    })
-
-    if (selectedSchool && selectedYear && allDataByYear[selectedYear]) {
-      const yearData = allDataByYear[selectedYear]
-      console.log(`Looking for students with SIIIR code: ${selectedSchool.Cod}`)
-
-      const schoolData = getStudentsForSchool(yearData, selectedSchool.Cod)
-      console.log(`Found ${schoolData.length} students for school ${selectedSchool.Denumire}`)
-
-      if (schoolData.length > 0) {
-        const stats = calculateSchoolStats(schoolData, selectedSchool.Denumire, selectedYear)
-        console.log("Calculated stats:", stats)
-        setSchoolStats(stats)
-      } else {
-        console.log("No students found for this school")
-        // Creează un obiect stats gol dar valid pentru a afișa mesajul corespunzător
-        setSchoolStats({
-          schoolName: selectedSchool.Denumire,
-          year: selectedYear,
-          totalStudents: 0,
-          averageFinalGrade: 0,
-          passRate: 0,
-          perfect10sTotal: 0,
-          perfect10sRomanian: 0,
-          perfect10sMathematics: 0,
-          totalContestations: 0,
-          totalAbsentees: 0,
-          highestGrade: 0,
-          lowestGrade: 0,
-          gradeAverages: {
-            romanian: 0,
-            mathematics: 0,
-            nativeLanguage: 0,
-          },
-          absentStats: {
-            romanian: { count: 0, percentage: 0 },
-            mathematics: { count: 0, percentage: 0 },
-            nativeLanguage: { count: 0, percentage: 0, totalTaking: 0 },
-          },
-          contestations: {
-            total: 0,
-            increased: 0,
-            decreased: 0,
-          },
-          students: [],
-        })
-      }
-    } else {
+    let cancelled = false
+    if (!selectedSchool || !selectedYear) {
       setSchoolStats(null)
+      setLoadingSchoolStats(false)
+      setSchoolStatsError(null)
+      return
     }
-  }, [selectedSchool, selectedYear, allDataByYear])
+
+    const loadSchoolStats = async () => {
+      setSchoolStats(null)
+      setSchoolStatsError(null)
+      setLoadingSchoolStats(true)
+      try {
+        const query = new URLSearchParams({ year: selectedYear, schoolCode: selectedSchool.Cod })
+        const students = await fetchGeneratedData<StudentData[]>(`/api/school-data?${query}`)
+        if (!cancelled) {
+          setSchoolStats(calculateSchoolStats(students, selectedSchool.Denumire, selectedYear))
+        }
+      } catch (error) {
+        console.error(`Unable to load records for ${selectedSchool.Cod} in ${selectedYear}:`, error)
+        if (!cancelled) setSchoolStatsError("Nu s-au putut încărca datele pentru această școală.")
+      } finally {
+        if (!cancelled) setLoadingSchoolStats(false)
+      }
+    }
+
+    loadSchoolStats()
+    return () => {
+      cancelled = true
+    }
+  }, [selectedSchool, selectedYear])
 
   const handleCountySelect = (county: string) => {
     setSelectedCounty(county)
   }
 
-  const handleSchoolSelect = (school: SchoolInfo) => {
+  const handleSchoolSelect = (school: SchoolDirectoryEntry) => {
     setSelectedSchool(school)
     setSchoolSearchTerm(school.Denumire)
     setFilteredSchools([]) // Această linie există deja și este corectă
@@ -333,6 +262,15 @@ export default function CautaScoalaPage() {
           </CardContent>
         </Card>
       </div>
+
+      {loadingSchoolStats && (
+        <div className="text-center text-muted-foreground">Se încarcă datele pentru școala selectată...</div>
+      )}
+      {schoolStatsError && (
+        <Alert>
+          <AlertDescription>{schoolStatsError}</AlertDescription>
+        </Alert>
+      )}
 
       {/* Statisticile școlii */}
       {schoolStats && (
@@ -516,7 +454,7 @@ export default function CautaScoalaPage() {
           <Card>
             <CardHeader>
               <CardTitle>Toți Studenții din {selectedYear}</CardTitle>
-              <CardDescription>Lista completă a studenților de la {selectedSchool.Denumire}</CardDescription>
+              <CardDescription>Lista completă a studenților de la {selectedSchool?.Denumire ?? schoolStats.schoolName}</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">

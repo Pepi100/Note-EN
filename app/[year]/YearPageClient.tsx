@@ -4,99 +4,38 @@ import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import {
-  parseCSV, // Importă funcția parseCSV pentru a citi fișierul CSV
-  type StudentData, // Importă tipul StudentData
-  calculateDetailedStats, // Importă funcția calculateDetailedStats pentru a calcula statisticile detaliate
-  getUniqueCounties, // Importă funcția getUniqueCounties pentru a extrage județele unice
-} from "@/lib/data-utils"
+import { fetchGeneratedData, type GeneratedYearData, type GeneratedYearStatistics } from "@/lib/generated-data"
 import { GradeHistogram } from "@/components/grade-histogram"
 import { RomaniaMap } from "@/components/romania-map"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 
-// Interfață pentru statisticile detaliate calculate de `calculateDetailedStats`
-interface DetailedStats {
-  totalStudents: number
-  averageFinalGrade: number
-  absentStats: {
-    romanian: { count: number; percentage: number }
-    mathematics: { count: number; percentage: number }
-    nativeLanguage: { count: number; percentage: number; totalTaking: number }
-  }
-  gradeAverages: {
-    romanian: number
-    mathematics: number
-    nativeLanguage: number
-  }
-  contestations: {
-    total: number
-    increased: number
-    decreased: number
-  }
-  gradeDistributions: {
-    finalGrades: number[]
-    romanianGrades: number[]
-    mathematicsGrades: number[]
-    nativeLanguageGrades: number[]
-  }
-  totalAbsenteesAnySubject: number
-  passRate: number
-}
-
 interface YearPageClientProps {
   year: string
 }
 
 export default function YearPageClient({ year }: YearPageClientProps) {
-  // Stochează toate datele brute pentru anul curent.
-  const [data, setData] = useState<StudentData[]>([])
-  // Stochează datele filtrate în funcție de județul selectat.
-  const [filteredData, setFilteredData] = useState<StudentData[]>([])
-  // Stochează statisticile detaliate calculate din `filteredData`.
-  const [stats, setStats] = useState<DetailedStats | null>(null)
-  // Stochează lista de județe unice disponibile în datele anului curent.
+  const [yearData, setYearData] = useState<GeneratedYearData | null>(null)
+  const [stats, setStats] = useState<GeneratedYearStatistics | null>(null)
   const [counties, setCounties] = useState<string[]>([])
-  // Stochează județul selectat curent de utilizator.
   const [selectedCounty, setSelectedCounty] = useState<string>("all")
-  // Stare pentru a indica dacă datele sunt în curs de încărcare.
   const [loading, setLoading] = useState(true)
-  // Stare pentru a stoca orice mesaj de eroare apărut în timpul încărcării datelor.
   const [error, setError] = useState<string | null>(null)
 
-  /**
-   * @useEffect
-   * @description Acest `useEffect` este responsabil pentru încărcarea datelor CSV specifice anului.
-   *              Rulează ori de câte ori prop-ul `year` se modifică.
-   *              Apelează `parseCSV` pentru a citi fișierul CSV corespunzător anului.
-   *              Populează stările `data`, `filteredData` și `counties`.
-   */
   useEffect(() => {
     const loadData = async () => {
       try {
         setLoading(true)
         setError(null)
 
-        // Apelează funcția `parseCSV` din `lib/data-utils.ts` pentru a citi fișierul CSV al anului curent.
-        const csvData = await parseCSV(`/${year}.csv`)
-
-        if (csvData.length === 0) {
-          setError(
-            `Nu s-au găsit date pentru anul ${year}. Vă rugăm să verificați dacă fișierul CSV există și conține date valide.`,
-          )
-          return
-        }
-
-        setData(csvData)
-        setFilteredData(csvData) // Inițial, datele filtrate sunt toate datele
-        // Apelează funcția `getUniqueCounties` din `lib/data-utils.ts` pentru a extrage județele unice.
-        setCounties(getUniqueCounties(csvData))
+        const generatedData = await fetchGeneratedData<GeneratedYearData>(`/generated/years/${year}.json`)
+        setYearData(generatedData)
+        setCounties(generatedData.counties)
+        setStats(generatedData.statsByCounty.all ?? null)
       } catch (error) {
-        console.error(`Eroare la încărcarea datelor pentru ${year}:`, error)
-        setError(
-          `Nu s-au putut încărca datele pentru anul ${year}. Vă rugăm să verificați dacă fișierul CSV este disponibil și formatat corect.`,
-        )
+        console.error(`Unable to load generated statistics for ${year}:`, error)
+        setError(`Nu s-au putut încărca statisticile pentru anul ${year}.`)
       } finally {
         setLoading(false)
       }
@@ -107,21 +46,9 @@ export default function YearPageClient({ year }: YearPageClientProps) {
     }
   }, [year]) // Rulează când se schimbă anul
 
-  /**
-   * @useEffect
-   * @description Acest `useEffect` este responsabil pentru filtrarea datelor și recalcularea statisticilor
-   *              ori de câte ori `data` (datele brute) sau `selectedCounty` (județul selectat) se modifică.
-   *              Filtrează `data` în funcție de `selectedCounty` și apoi apelează `calculateDetailedStats`.
-   */
   useEffect(() => {
-    if (data.length > 0) {
-      // Filtrează datele în funcție de județul selectat
-      const filtered = selectedCounty === "all" ? data : data.filter((student) => student.Judet === selectedCounty)
-      setFilteredData(filtered)
-      // Apelează funcția `calculateDetailedStats` din `lib/data-utils.ts` pentru a obține statisticile detaliate.
-      setStats(calculateDetailedStats(filtered))
-    }
-  }, [data, selectedCounty]) // Rulează când se schimbă datele sau județul selectat
+    setStats(yearData?.statsByCounty[selectedCounty] ?? null)
+  }, [yearData, selectedCounty])
 
   /**
    * @function handleCountySelect
@@ -151,7 +78,7 @@ export default function YearPageClient({ year }: YearPageClientProps) {
         </Alert>
         <div className="text-center">
           <p className="text-muted-foreground">
-            Asigurați-vă că fișierul {year}.csv este plasat în directorul public/ și conține coloanele necesare.
+            Verificați dacă datele generate pentru anul {year} sunt disponibile.
           </p>
         </div>
       </div>
@@ -346,7 +273,7 @@ export default function YearPageClient({ year }: YearPageClientProps) {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <GradeHistogram data={stats.gradeDistributions.finalGrades} title="Note Finale" />
+            <GradeHistogram data={stats.gradeDistributions.finalGrades} title="Note Finale" precomputed />
           </CardContent>
         </Card>
 
@@ -358,7 +285,7 @@ export default function YearPageClient({ year }: YearPageClientProps) {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <GradeHistogram data={stats.gradeDistributions.romanianGrades} title="Note Română" />
+            <GradeHistogram data={stats.gradeDistributions.romanianGrades} title="Note Română" precomputed />
           </CardContent>
         </Card>
 
@@ -370,7 +297,7 @@ export default function YearPageClient({ year }: YearPageClientProps) {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <GradeHistogram data={stats.gradeDistributions.mathematicsGrades} title="Note Matematică" />
+            <GradeHistogram data={stats.gradeDistributions.mathematicsGrades} title="Note Matematică" precomputed />
           </CardContent>
         </Card>
 
@@ -382,7 +309,11 @@ export default function YearPageClient({ year }: YearPageClientProps) {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <GradeHistogram data={stats.gradeDistributions.nativeLanguageGrades} title="Note Limba Maternă" />
+            <GradeHistogram
+              data={stats.gradeDistributions.nativeLanguageGrades}
+              title="Note Limba Maternă"
+              precomputed
+            />
           </CardContent>
         </Card>
       </div>

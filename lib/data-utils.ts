@@ -49,6 +49,25 @@ export interface SchoolInfo {
   "Forma de proprietate": string
 }
 
+export function transformStudentHeader(header: string): string {
+  return header === "Medie_5-8" ? "Medie_5_8" : header
+}
+
+export function transformStudentValue(value: string, field: string): string | number {
+  if (["Fin_ro", "Fin_mate", "Fin_lm"].includes(field)) {
+    if (value === "-") return "-"
+    const num = Number.parseFloat(value?.toString() || "0")
+    return isNaN(num) ? 0 : num
+  }
+
+  if (["Nota_ro", "Nota_mate", "Nota_lm", "Medie_en", "Medie_5_8", "Admitere"].includes(field)) {
+    const num = Number.parseFloat(value?.toString() || "0")
+    return isNaN(num) ? 0 : num
+  }
+
+  return value?.toString() || ""
+}
+
 /**
  * @interface OverviewYearMetric
  * @description Definește structura metricilor agregate pe an, utilizate pentru graficele din pagina de prezentare generală (`app/page.tsx`).
@@ -156,10 +175,7 @@ export async function parseCSV(filePath: string): Promise<StudentData[]> {
          * @param {string} header - Numele antetului din CSV.
          * @returns {string} - Numele transformat al antetului.
          */
-        transformHeader: (header: string) => {
-          if (header === "Medie_5-8") return "Medie_5_8"
-          return header // Pentru celelalte anteturi, folosește-le ca atare
-        },
+        transformHeader: transformStudentHeader,
         /**
          * @function transform
          * @description Funcție de transformare a valorilor celulelor.
@@ -169,23 +185,7 @@ export async function parseCSV(filePath: string): Promise<StudentData[]> {
          * @param {string} field - Numele câmpului (coloanei) căruia îi aparține valoarea.
          * @returns {any} - Valoarea transformată.
          */
-        transform: (value: string, field: string) => {
-          // Câmpuri care pot fi '-' dar ar trebui să fie numere dacă nu sunt '-'
-          if (["Fin_ro", "Fin_mate", "Fin_lm"].includes(field)) {
-            if (value === "-") {
-              return "-" // Păstrează ca șir dacă este '-'
-            }
-            const num = Number.parseFloat(value?.toString() || "0")
-            return isNaN(num) ? 0 : num // Parsează ca număr, altfel 0
-          }
-          // Câmpuri care sunt întotdeauna numere (note inițiale, medii finale, etc.)
-          if (["Nota_ro", "Nota_mate", "Nota_lm", "Medie_en", "Medie_5_8", "Admitere"].includes(field)) {
-            const num = Number.parseFloat(value?.toString() || "0")
-            return isNaN(num) ? 0 : num
-          }
-          // Toate celelalte câmpuri sunt șiruri de caractere
-          return value?.toString() || ""
-        },
+        transform: transformStudentValue,
         /**
          * @function complete
          * @description Callback apelat la finalizarea parsării.
@@ -846,7 +846,10 @@ export async function parseSchoolsCSV(): Promise<SchoolInfo[]> {
  * @param {string} county - Codul județului.
  * @returns {SchoolInfo[]} - Un array de școli pentru județul specificat.
  */
-export function getSchoolsForCounty(schools: SchoolInfo[], county: string): SchoolInfo[] {
+export function getSchoolsForCounty(
+  schools: Array<Pick<SchoolInfo, "Cod" | "Denumire" | "Localitate" | "Judet">>,
+  county: string,
+): Array<Pick<SchoolInfo, "Cod" | "Denumire" | "Localitate" | "Judet">> {
   if (!schools || schools.length === 0) return []
 
   return schools.filter((school) => COUNTY_NAME_TO_ABBR[removeRomanianDiacritics(school.Judet)] === county).sort((a, b) => a.Denumire.localeCompare(b.Denumire))

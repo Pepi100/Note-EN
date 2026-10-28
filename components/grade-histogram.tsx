@@ -5,6 +5,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 interface GradeHistogramProps {
   data: number[]
   title: string
+  precomputed?: boolean
 }
 
 // Custom tooltip component for Recharts
@@ -22,9 +23,8 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null
 }
 
-export function GradeHistogram({ data, title }: GradeHistogramProps) {
-  // Handle empty data
-  if (!data || data.length === 0) {
+export function GradeHistogram({ data, title, precomputed = false }: GradeHistogramProps) {
+  if (!data || data.length === 0 || (precomputed && data.every((count) => count === 0))) {
     return (
       <div className="h-64 flex items-center justify-center text-muted-foreground">
         Nu sunt date disponibile pentru {title.toLowerCase()}
@@ -60,32 +60,28 @@ export function GradeHistogram({ data, title }: GradeHistogramProps) {
     upper: 10.0, // For exact match
   })
 
-  // Count grades in each bin
-  data.forEach((grade) => {
-    // Round grade to 2 decimal places to handle floating point precision for binning
-    const roundedGrade = Number.parseFloat(grade.toFixed(2))
+  if (precomputed) {
+    data.forEach((count, index) => {
+      if (bins[index]) bins[index].count = count
+    })
+  } else {
+    data.forEach((grade) => {
+      const roundedGrade = Number.parseFloat(grade.toFixed(2))
 
-    if (roundedGrade === 10.0) {
-      // Assign to "Exact 10" bin
-      const exact10Bin = bins.find((b) => b.range === "Exact 10")
-      if (exact10Bin) {
-        exact10Bin.count++
-      }
-    } else if (roundedGrade >= 1 && roundedGrade < 10) {
-      // Assign to other intervals
-      for (let i = 0; i < bins.length; i++) {
-        // Skip the "Exact 10" bin in this loop
-        if (bins[i].range === "Exact 10") continue
-
-        // Check if roundedGrade falls within the current bin's range
-        // Use a small epsilon for the upper bound to ensure inclusivity for the upper limit of the interval
-        if (roundedGrade >= bins[i].lower && roundedGrade <= bins[i].upper + 0.000001) {
-          bins[i].count++
-          break // Grade assigned, move to next student
+      if (roundedGrade === 10.0) {
+        const exact10Bin = bins.find((b) => b.range === "Exact 10")
+        if (exact10Bin) exact10Bin.count++
+      } else if (roundedGrade >= 1 && roundedGrade < 10) {
+        for (let i = 0; i < bins.length; i++) {
+          if (bins[i].range === "Exact 10") continue
+          if (roundedGrade >= bins[i].lower && roundedGrade <= bins[i].upper + 0.000001) {
+            bins[i].count++
+            break
+          }
         }
       }
-    }
-  })
+    })
+  }
 
   return (
     <div className="h-[300px]">

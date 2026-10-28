@@ -4,138 +4,36 @@ import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import {
-  parseCSV, // Importă funcția parseCSV pentru a citi fișierele CSV
-  getOverviewYearMetrics, // Importă funcția getOverviewYearMetrics pentru a calcula metricile anuale
-  getUniqueCounties, // Importă funcția getUniqueCounties pentru a extrage județele unice
-  type OverviewYearMetric, // Importă tipul OverviewYearMetric
-  type StudentData, // Importă tipul StudentData
-} from "@/lib/data-utils"
 import { Line, LineChart, XAxis, YAxis, CartesianGrid, Legend, ResponsiveContainer, Tooltip } from "recharts"
 import { ChartContainer } from "@/components/ui/chart"
 import { CustomChartTooltip } from "@/components/custom-chart-tooltip" // Re-importă CustomChartTooltip
 import { RomaniaMap } from "@/components/romania-map"
 import { Button } from "@/components/ui/button"
+import { fetchGeneratedData, type GeneratedOverviewData } from "@/lib/generated-data"
 
 export default function OverviewPage() {
-  // Stochează toate datele brute, organizate pe ani.
-  // Utilizată pentru a filtra datele în funcție de județul selectat fără a reîncărca fișierele.
-  const [allDataByYear, setAllDataByYear] = useState<Record<string, StudentData[]>>({})
-  // Stochează metricile agregate pe an, care sunt afișate în grafice.
-  // Acestea sunt recalculate ori de câte ori se schimbă datele brute sau județul selectat.
-  const [yearlyMetrics, setYearlyMetrics] = useState<OverviewYearMetric[]>([])
-  // Stochează lista de județe unice disponibile în toate datele.
-  // Utilizată pentru a popula dropdown-ul de selecție a județului și harta.
-  const [counties, setCounties] = useState<string[]>([])
-  // Stochează județul selectat curent de utilizator.
-  // Valoarea implicită este "all" pentru a afișa datele pentru toate județele.
+  const [overviewData, setOverviewData] = useState<GeneratedOverviewData | null>(null)
   const [selectedCounty, setSelectedCounty] = useState<string>("all")
-  // Stare pentru a indica dacă datele sunt în curs de încărcare.
   const [loading, setLoading] = useState(true)
-  // Stare pentru a stoca orice mesaj de eroare apărut în timpul încărcării datelor.
   const [error, setError] = useState<string | null>(null)
-  // Stare pentru a stoca informații de depanare, utile pentru diagnosticarea problemelor.
-  const [debugInfo, setDebugInfo] = useState<any[]>([])
+  const counties = overviewData?.counties ?? []
+  const yearlyMetrics = overviewData?.metricsByCounty[selectedCounty] ?? []
 
-  /**
-   * @useEffect
-   * @description Hook-ul `useEffect` este folosit pentru a încărca toate datele CSV la montarea componentei.
-   *              Rulează o singură dată (datorită array-ului de dependențe gol `[]`).
-   *              Apelează `parseCSV` pentru fiecare an din intervalul 2016-2025.
-   *              Colectează toate datele pentru a extrage județele unice.
-   */
   useEffect(() => {
-    const loadAllYearData = async () => {
+    const loadOverview = async () => {
       try {
-        setLoading(true)
-        setError(null)
-        const debug: any[] = []
-
-        const years = []
-        for (let i = 2016; i <= 2025; i++) {
-          years.push(i.toString())
-        }
-
-        debug.push({
-          currentURL: window.location.href,
-          baseURL: window.location.origin,
-          pathname: window.location.pathname,
-          hostname: window.location.hostname,
-        })
-
-        const loadedData: Record<string, StudentData[]> = {}
-        let allStudents: StudentData[] = [] // Colectează toți studenții pentru a găsi județele unice
-
-        for (const year of years) {
-          try {
-            debug.push(`Se încarcă datele pentru anul ${year}...`)
-            // Apelează funcția `parseCSV` din `lib/data-utils.ts` pentru a citi fișierul CSV al anului curent.
-            const data = await parseCSV(`/${year}.csv`)
-            debug.push(`S-au încărcat ${data.length} înregistrări pentru ${year}`)
-            loadedData[year] = data
-            allStudents = allStudents.concat(data) // Adaugă la lista generală de studenți
-          } catch (error) {
-            console.error(`Eroare la încărcarea datelor pentru ${year}:`, error)
-            debug.push(`Eroare la încărcarea datelor pentru ${year}: ${error}`)
-            loadedData[year] = [] // Asigură că anul există chiar dacă datele sunt goale
-          }
-        }
-
-        setAllDataByYear(loadedData)
-        // Apelează funcția `getUniqueCounties` din `lib/data-utils.ts` pentru a extrage județele unice din toate datele.
-        setCounties(getUniqueCounties(allStudents))
-        setDebugInfo(debug)
-
-        const hasValidData = Object.values(loadedData).some((dataArray) => dataArray.length > 0)
-        if (!hasValidData) {
-          setError(
-            "Nu s-au găsit date valide în fișierele CSV. Vă rugăm să verificați fișierele CSV și accesibilitatea acestora.",
-          )
-        }
+        setOverviewData(await fetchGeneratedData<GeneratedOverviewData>("/generated/overview.json"))
       } catch (error) {
-        console.error("Eroare la încărcarea statisticilor anuale:", error)
-        setError(
-          "Nu s-au putut încărca statisticile. Vă rugăm să verificați dacă fișierele CSV sunt disponibile și accesibile.",
-        )
-        setDebugInfo((prev) => [...prev, `Eroare generală: ${error}`])
+        console.error("Unable to load overview statistics:", error)
+        setError("Nu s-au putut încărca statisticile. Verificați dacă datele generate sunt disponibile.")
       } finally {
         setLoading(false)
       }
     }
 
-    loadAllYearData()
-  }, []) // Array de dependențe gol, rulează o singură dată la montare
+    loadOverview()
+  }, [])
 
-  /**
-   * @useEffect
-   * @description Acest `useEffect` este responsabil pentru recalcularea metricilor anuale ori de câte ori
-   *              `allDataByYear` (datele brute încărcate) sau `selectedCounty` (județul selectat) se modifică.
-   *              Filtrează datele pentru fiecare an în funcție de județul selectat și apoi apelează
-   *              `getOverviewYearMetrics` pentru a obține statisticile necesare graficelor.
-   */
-  useEffect(() => {
-    if (Object.keys(allDataByYear).length > 0) {
-      const years = Object.keys(allDataByYear).sort() // Asigură că anii sunt sortați
-      const metrics: OverviewYearMetric[] = []
-
-      for (const year of years) {
-        const dataForYear = allDataByYear[year] || []
-        // Filtrează datele anului curent în funcție de județul selectat
-        const filteredDataForYear =
-          selectedCounty === "all" ? dataForYear : dataForYear.filter((student) => student.Judet === selectedCounty)
-        // Apelează funcția `getOverviewYearMetrics` din `lib/data-utils.ts` pentru a calcula metricile.
-        metrics.push(getOverviewYearMetrics(filteredDataForYear, year))
-      }
-      setYearlyMetrics(metrics)
-    }
-  }, [allDataByYear, selectedCounty]) // Rulează când se schimbă datele încărcate sau județul selectat
-
-  /**
-   * @function handleCountySelect
-   * @description Funcție callback pentru a actualiza starea `selectedCounty` atunci când utilizatorul
-   *              selectează un județ nou din dropdown sau face click pe hartă.
-   * @param {string} county - Codul județului selectat.
-   */
   const handleCountySelect = (county: string) => {
     setSelectedCounty(county)
   }
@@ -157,18 +55,7 @@ export default function OverviewPage() {
           <AlertDescription>{error}</AlertDescription>
         </Alert>
         <div className="text-center space-y-2">
-          <p className="text-muted-foreground">
-            Asigurați-vă că fișierele CSV (ex: 2016.csv, ..., 2025.csv) sunt plasate în directorul public/.
-          </p>
-          <p className="text-sm text-muted-foreground">
-            Verificați consola browserului și informațiile de depanare de mai jos pentru mai multe detalii.
-          </p>
-        </div>
-
-        {/* Informații de depanare */}
-        <div className="mt-8 p-4 bg-muted rounded-lg">
-          <h3 className="font-medium mb-2">Informații de Depanare:</h3>
-          <pre className="text-xs overflow-auto whitespace-pre-wrap">{JSON.stringify(debugInfo, null, 2)}</pre>
+          <p className="text-muted-foreground">Rulați generatorul de statistici înainte de a porni aplicația.</p>
         </div>
       </div>
     )
@@ -183,19 +70,13 @@ export default function OverviewPage() {
       <div className="space-y-4">
         <Alert>
           <AlertDescription>
-            Nu s-au găsit date în niciun fișier CSV. Vă rugăm să verificați fișierele de date.
+            Nu s-au găsit date în statisticile generate. Verificați fișierele sursă și generați din nou statisticile.
           </AlertDescription>
         </Alert>
         <div className="text-center">
           <p className="text-muted-foreground">
-            Asigurați-vă că fișierele CSV conțin date valide cu coloanele necesare.
+            Verificați că CSV-urile din directorul public conțin date valide.
           </p>
-        </div>
-
-        {/* Informații de depanare */}
-        <div className="mt-8 p-4 bg-muted rounded-lg">
-          <h3 className="font-medium mb-2">Informații de Depanare:</h3>
-          <pre className="text-xs overflow-auto whitespace-pre-wrap">{JSON.stringify(debugInfo, null, 2)}</pre>
         </div>
       </div>
     )

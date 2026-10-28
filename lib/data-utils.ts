@@ -215,6 +215,44 @@ export async function parseCSV(filePath: string): Promise<StudentData[]> {
   }
 }
 
+export function parseStudentsForSchool(filePath: string, schoolCode: string): Promise<StudentData[]> {
+  const fullPath = getAssetPath(filePath)
+  return new Promise((resolve, reject) => {
+    const students: StudentData[] = []
+    let settled = false
+
+    Papa.parse<StudentData>(fullPath, {
+      download: true,
+      header: true,
+      skipEmptyLines: true,
+      dynamicTyping: false,
+      transformHeader: transformStudentHeader,
+      transform: transformStudentValue,
+      step: (result, parser) => {
+        if (result.errors.length > 0) {
+          settled = true
+          parser.abort()
+          reject(new Error(`Unable to parse ${fullPath}: ${result.errors[0].message}`))
+          return
+        }
+
+        if (result.data.SIIIR === schoolCode) {
+          students.push(result.data)
+        }
+      },
+      complete: () => {
+        if (!settled) resolve(students)
+      },
+      error: (error) => {
+        if (!settled) {
+          settled = true
+          reject(error)
+        }
+      },
+    })
+  })
+}
+
 /**
  * @function calculateYearStats
  * @deprecated Această funcție a fost utilizată anterior pentru statisticile simplificate din pagina de overview.

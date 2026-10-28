@@ -6,12 +6,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { GradeHistogram } from "@/components/grade-histogram"
-import { calculateSchoolStats, getSchoolsForCounty, type StudentData, type SchoolStats } from "@/lib/data-utils"
+import {
+  calculateSchoolStats,
+  getSchoolsForCounty,
+  parseStudentsForSchool,
+  type SchoolStats,
+} from "@/lib/data-utils"
 import { RomaniaMap } from "@/components/romania-map"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { removeRomanianDiacritics } from "@/lib/utils"
 import { fetchGeneratedData, type GeneratedDataIndex, type SchoolDirectoryEntry } from "@/lib/generated-data"
-import { getAssetPath } from "@/lib/path-utils"
 
 export default function CautaScoalaPage() {
   const [allSchools, setAllSchools] = useState<SchoolDirectoryEntry[]>([])
@@ -97,8 +101,7 @@ export default function CautaScoalaPage() {
       setSchoolStatsError(null)
       setLoadingSchoolStats(true)
       try {
-        const query = new URLSearchParams({ year: selectedYear, schoolCode: selectedSchool.Cod })
-        const students = await fetchGeneratedData<StudentData[]>(`/api/school-data?${query}`)
+        const students = await parseStudentsForSchool(`/${selectedYear}.csv`, selectedSchool.Cod)
         if (!cancelled) {
           setSchoolStats(calculateSchoolStats(students, selectedSchool.Denumire, selectedYear))
         }

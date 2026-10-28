@@ -77,7 +77,7 @@ export default function CautaScoalaPage() {
 
   // Filtrează școlile pe baza termenului de căutare
   useEffect(() => {
-    if (schoolSearchTerm.length >= 2) {
+    if (!selectedSchool && schoolSearchTerm.length >= 2) {
       const filtered = schoolsForCounty.filter((school) =>
         removeRomanianDiacritics(school.Denumire).toLowerCase().includes(removeRomanianDiacritics(schoolSearchTerm).toLowerCase()),
       )
@@ -85,7 +85,7 @@ export default function CautaScoalaPage() {
     } else {
       setFilteredSchools([])
     }
-  }, [schoolSearchTerm, schoolsForCounty])
+  }, [schoolSearchTerm, schoolsForCounty, selectedSchool])
 
   useEffect(() => {
     let cancelled = false
@@ -202,7 +202,10 @@ export default function CautaScoalaPage() {
               <Input
                 placeholder="Introdu numele școlii..."
                 value={schoolSearchTerm}
-                onChange={(e) => setSchoolSearchTerm(e.target.value)}
+                onChange={(e) => {
+                  setSelectedSchool(null)
+                  setSchoolSearchTerm(e.target.value)
+                }}
                 onBlur={() => {
                   // Întârzie puțin închiderea pentru a permite click-ul pe opțiuni
                   setTimeout(() => setFilteredSchools([]), 200)
@@ -211,7 +214,9 @@ export default function CautaScoalaPage() {
                   // Reafișează sugestiile dacă există text și nu e selectată o școală
                   if (schoolSearchTerm.length >= 2 && !selectedSchool) {
                     const filtered = schoolsForCounty.filter((school) =>
-                      school.Denumire.toLowerCase().includes(schoolSearchTerm.toLowerCase()),
+                      removeRomanianDiacritics(school.Denumire)
+                        .toLowerCase()
+                        .includes(removeRomanianDiacritics(schoolSearchTerm).toLowerCase()),
                     )
                     setFilteredSchools(filtered.slice(0, 10))
                   }

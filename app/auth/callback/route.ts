@@ -3,11 +3,11 @@ import { createClient } from "@/lib/supabase/server"
 
 export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get("code")
-  const destination = new URL("/login", request.url)
+  const errorDestination = new URL("/login", request.url)
 
   if (!code) {
-    destination.searchParams.set("auth_error", "callback")
-    return NextResponse.redirect(destination)
+    errorDestination.searchParams.set("auth_error", "callback")
+    return NextResponse.redirect(errorDestination)
   }
 
   const supabase = createClient()
@@ -15,9 +15,9 @@ export async function GET(request: NextRequest) {
 
   if (error) {
     console.error("Unable to complete Supabase OAuth callback:", error)
-    destination.searchParams.set("auth_error", "callback")
-    return NextResponse.redirect(destination)
+    errorDestination.searchParams.set("auth_error", "callback")
+    return NextResponse.redirect(errorDestination)
   }
 
-  return NextResponse.redirect(destination)
+  return NextResponse.redirect(new URL("/", request.url))
 }

@@ -16,7 +16,7 @@ interface AuthContextValue {
   signIn: (email: string, password: string) => Promise<AuthActionResult>
   signUp: (
     name: string,
-    dateOfBirth: string,
+    dateOfBirth: string | null,
     email: string,
     password: string,
   ) => Promise<AuthActionResult>
@@ -76,7 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = async (
     name: string,
-    dateOfBirth: string,
+    dateOfBirth: string | null,
     email: string,
     password: string,
   ): Promise<AuthActionResult> => {
@@ -85,7 +85,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       email,
       password,
       options: {
-        data: { full_name: name.trim(), date_of_birth: dateOfBirth },
+        data: {
+          full_name: name.trim(),
+          ...(dateOfBirth ? { date_of_birth: dateOfBirth } : {}),
+        },
         emailRedirectTo: `${origin}/auth/callback`,
       },
     })

@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState, type FormEvent } from "react"
+import { useRouter } from "next/navigation"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -9,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import { useAuth } from "@/components/auth-provider"
 
 export default function LoginPage() {
+  const router = useRouter()
   const { user, loading, authError, signIn, signUp, signInWithGoogle, signOut } = useAuth()
   const [isRegistering, setIsRegistering] = useState(false)
   const [name, setName] = useState("")
@@ -27,6 +29,12 @@ export default function LoginPage() {
       setError("Autentificarea nu a putut fi finalizată. Încearcă din nou.")
     }
   }, [])
+
+  useEffect(() => {
+    if (user) {
+      router.replace("/")
+    }
+  }, [router, user])
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -154,7 +162,7 @@ export default function LoginPage() {
             )}
             {isRegistering && (
               <div className="space-y-2">
-                <Label htmlFor="account-date-of-birth">Data nașterii</Label>
+                <Label htmlFor="account-date-of-birth">Data nașterii (opțional)</Label>
                 <Input
                   id="account-date-of-birth"
                   type="date"
@@ -162,7 +170,6 @@ export default function LoginPage() {
                   max={latestDateOfBirth}
                   value={dateOfBirth}
                   onChange={(event) => setDateOfBirth(event.target.value)}
-                  required
                 />
               </div>
             )}

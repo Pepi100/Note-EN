@@ -112,7 +112,7 @@ export default function OverviewPage() {
               <div className="space-y-4 lg:flex-1">
                 <div>
                   <CardTitle className="text-3xl font-bold tracking-tight">
-                    Prezentare Generală Statistici Studenți
+                    Prezentare Generală Educație.ro
                   </CardTitle>
                   <CardDescription className="mt-2">
                     Analiză cuprinzătoare a performanței studenților pe parcursul mai multor ani

@@ -10,7 +10,7 @@ import Link from "next/link" // Added Link import
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Tablou de Bord Statistici Studenți", // Translated title
+  title: "Educație.ro | Evaluarea Națională",
   description: "Tablou de bord pentru analiza datelor de performanță ale studenților pe parcursul anilor", // Translated description
 }
 
@@ -32,7 +32,7 @@ export default function RootLayout({
               <div className="container mx-auto px-4 py-6">
                 <div className="flex flex-col md:flex-row justify-between items-center gap-4">
                   <div className="text-sm text-muted-foreground">
-                    © 2024 Statistici Studenți. Toate drepturile rezervate.
+                    © 2026 Educație.ro. Toate drepturile rezervate.
                   </div>
                   <div className="flex items-center gap-4">
                     <Link href="/rezultate/despre" className="text-sm text-muted-foreground hover:text-primary transition-colors">

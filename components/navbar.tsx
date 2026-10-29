@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
@@ -13,9 +14,35 @@ export function Navbar() {
   const pathname = usePathname()
   const { theme, setTheme } = useTheme() // Initialize useTheme
   const { user, loading } = useAuth()
+  const [isAdmin, setIsAdmin] = useState(false)
   const isHome = pathname === "/"
   const isPreparationPage = pathname === "/pregatire"
   const isResultsSection = pathname.startsWith("/rezultate")
+
+  useEffect(() => {
+    if (loading || !user) {
+      setIsAdmin(false)
+      return
+    }
+
+    const controller = new AbortController()
+    const checkAdminAccess = async () => {
+      try {
+        const response = await fetch("/api/admin/exercises", { signal: controller.signal })
+        setIsAdmin(response.ok)
+        if (!response.ok && response.status !== 401 && response.status !== 403) {
+          console.error("Unable to check admin access for the navigation menu.")
+        }
+      } catch (error) {
+        if (controller.signal.aborted) return
+        console.error("Unable to check admin access for the navigation menu:", error)
+        setIsAdmin(false)
+      }
+    }
+
+    void checkAdminAccess()
+    return () => controller.abort()
+  }, [loading, user])
 
   const allYears = []
   for (let i = 2016; i <= 2026; i++) {
@@ -43,7 +70,7 @@ export function Navbar() {
           <div className="flex items-center space-x-4">
             {!isPreparationPage && (
               <Link href="/" className="text-xl font-bold">
-                Statistici Studenți
+                Educație.ro
               </Link>
             )}
           </div>
@@ -123,6 +150,18 @@ export function Navbar() {
                   Găsește-ți Locul
                 </Link>
               </>
+            )}
+
+            {isAdmin && (
+              <Link
+                href="/admin/exercises"
+                className={cn(
+                  "text-sm font-medium transition-colors hover:text-primary",
+                  pathname === "/admin/exercises" ? "text-primary" : "text-muted-foreground",
+                )}
+              >
+                Admin
+              </Link>
             )}
 
             <Button variant="ghost" size="icon" onClick={toggleTheme}>

@@ -1,57 +1,110 @@
 "use client"
 
-import { useState, type FormEvent } from "react"
+import { useEffect, useState, type FormEvent } from "react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { useDemoAuth } from "@/components/auth-provider"
+import { useAuth } from "@/components/auth-provider"
 
 export default function LoginPage() {
-  const { user, signIn, signOut } = useDemoAuth()
+  const { user, loading, authError, signIn, signUp, signInWithGoogle, signOut } = useAuth()
   const [isRegistering, setIsRegistering] = useState(false)
   const [name, setName] = useState("")
+  const [dateOfBirth, setDateOfBirth] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
+  const [message, setMessage] = useState<string | null>(null)
+  const [submitting, setSubmitting] = useState(false)
+  const today = new Date()
+  const latestDateOfBirth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("auth_error") === "callback") {
+      setError("Autentificarea nu a putut fi finalizată. Încearcă din nou.")
+    }
+  }, [])
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setError(null)
-
-    if (password.length < 8) {
-      setError("Parola trebuie să conțină cel puțin 8 caractere.")
-      return
-    }
+    setMessage(null)
 
     if (isRegistering && password !== confirmPassword) {
       setError("Parolele nu coincid.")
       return
     }
 
-    signIn(email, isRegistering ? name : undefined)
+    setSubmitting(true)
+    try {
+      const result = isRegistering
+        ? await signUp(name, dateOfBirth, email, password)
+        : await signIn(email, password)
+      if (result.error) {
+        setError(result.error)
+      } else if (result.needsEmailConfirmation) {
+        setMessage("Verifică-ți emailul și confirmă adresa pentru a activa contul.")
+      }
+    } catch (error) {
+      console.error("Supabase authentication request failed:", error)
+      setError("Cererea de autentificare nu a putut fi finalizată. Încearcă din nou.")
+    } finally {
+      setSubmitting(false)
+    }
   }
 
-  const handleGoogleDemo = () => {
-    signIn("cont.demo@gmail.com", "Utilizator Google demo")
+  const handleGoogleSignIn = async () => {
+    setError(null)
+    setSubmitting(true)
+    try {
+      const result = await signInWithGoogle()
+      if (result.error) setError(result.error)
+    } catch (error) {
+      console.error("Google OAuth request failed:", error)
+      setError("Autentificarea Google nu a putut fi pornită. Încearcă din nou.")
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleSignOut = async () => {
+    setError(null)
+    try {
+      const result = await signOut()
+      if (result.error) setError(result.error)
+    } catch (error) {
+      console.error("Supabase sign-out request failed:", error)
+      setError("Deconectarea nu a putut fi finalizată. Încearcă din nou.")
+    }
+  }
+
+  if (loading) {
+    return <div className="flex min-h-[300px] items-center justify-center">Se verifică sesiunea...</div>
   }
 
   if (user) {
+    const fullName = user.user_metadata?.full_name
     return (
       <section className="mx-auto max-w-md">
         <Card>
           <CardHeader>
             <CardTitle>Contul tău</CardTitle>
-            <CardDescription>Sesiune demonstrativă, disponibilă doar până reîncarci pagina.</CardDescription>
+            <CardDescription>Autentificare gestionată de Supabase.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <p className="font-medium">{user.name}</p>
+              {typeof fullName === "string" && <p className="font-medium">{fullName}</p>}
               <p className="text-sm text-muted-foreground">{user.email}</p>
             </div>
-            <Button variant="outline" className="w-full" onClick={signOut}>
+            {error && (
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+            <Button variant="outline" className="w-full" onClick={handleSignOut}>
               Deconectare
             </Button>
           </CardContent>
@@ -66,12 +119,20 @@ export default function LoginPage() {
         <CardHeader>
           <CardTitle>{isRegistering ? "Creează un cont" : "Autentificare"}</CardTitle>
           <CardDescription>
-            Demo de interfață. Conturile și parolele nu sunt salvate și nu există încă autentificare reală.
+            {isRegistering
+              ? "Înregistrează-te cu email și parolă."
+              : "Conectează-te cu email și parolă sau continuă cu Google."}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Button type="button" variant="outline" className="w-full" onClick={handleGoogleDemo}>
-            Continuă cu Google (demo)
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            onClick={handleGoogleSignIn}
+            disabled={submitting}
+          >
+            Continuă cu Google
           </Button>
 
           <div className="relative py-1 text-center text-xs text-muted-foreground">
@@ -87,6 +148,20 @@ export default function LoginPage() {
                   autoComplete="name"
                   value={name}
                   onChange={(event) => setName(event.target.value)}
+                  required
+                />
+              </div>
+            )}
+            {isRegistering && (
+              <div className="space-y-2">
+                <Label htmlFor="account-date-of-birth">Data nașterii</Label>
+                <Input
+                  id="account-date-of-birth"
+                  type="date"
+                  autoComplete="bday"
+                  max={latestDateOfBirth}
+                  value={dateOfBirth}
+                  onChange={(event) => setDateOfBirth(event.target.value)}
                   required
                 />
               </div>
@@ -110,7 +185,6 @@ export default function LoginPage() {
                 autoComplete={isRegistering ? "new-password" : "current-password"}
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
-                minLength={8}
                 required
               />
             </div>
@@ -123,7 +197,6 @@ export default function LoginPage() {
                   autoComplete="new-password"
                   value={confirmPassword}
                   onChange={(event) => setConfirmPassword(event.target.value)}
-                  minLength={8}
                   required
                 />
               </div>
@@ -134,9 +207,19 @@ export default function LoginPage() {
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
+            {authError && !error && (
+              <Alert variant="destructive">
+                <AlertDescription>{authError}</AlertDescription>
+              </Alert>
+            )}
+            {message && (
+              <Alert>
+                <AlertDescription>{message}</AlertDescription>
+              </Alert>
+            )}
 
-            <Button type="submit" className="w-full">
-              {isRegistering ? "Creează cont demo" : "Conectare demo"}
+            <Button type="submit" className="w-full" disabled={submitting}>
+              {submitting ? "Se procesează..." : isRegistering ? "Creează cont" : "Conectare"}
             </Button>
           </form>
 
@@ -148,6 +231,7 @@ export default function LoginPage() {
               onClick={() => {
                 setIsRegistering(!isRegistering)
                 setError(null)
+                setMessage(null)
               }}
             >
               {isRegistering ? "Autentifică-te" : "Înregistrează-te"}

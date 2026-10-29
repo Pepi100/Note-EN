@@ -24,6 +24,16 @@ Annual CSV files in `public/` are processed into compact summaries before develo
 
 To convert an official exam workbook, place `YYYY.xlsx` in `public/` and run `python python/convert_exam_xlsx.py YYYY`. Then run the usual development or build command. The statistics generator discovers annual CSV files automatically. Keep `scoli.csv` in `public/` so the school directory and county mappings can be regenerated.
 
+## Authentication setup
+
+Supabase email/password and Google sign-in use the root `.env.local` file with `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. Never put a Supabase secret or service-role key in a `NEXT_PUBLIC_` variable.
+
+Enable the Email provider in Supabase Auth. Add the local callback URLs (`http://localhost:3000/auth/callback` and `http://127.0.0.1:3000/auth/callback`) to the Auth redirect URL allow list; add the production callback URL when a deployment domain is chosen. For Google sign-in, configure the Google provider in Supabase and use the callback URI shown in its provider settings as the authorized redirect URI in Google Cloud.
+
+Authentication sessions are cookie-backed and refreshed by Next.js middleware. Deploy to a host that runs Next.js middleware and route handlers; static-only hosting does not support the authentication callback. The app does not yet read profile rows.
+
+To store each email/password signup in `public.profiles`, run [`supabase/profile-signup.sql`](./supabase/profile-signup.sql) in the Supabase SQL Editor. It adds a `name` column if needed and installs a database trigger that saves the name and date of birth from signup metadata, initializes `exercises_solved` to `0`, and keeps direct client table access disabled. The `profiles` table must already have `id` (unique), `date_of_birth` (`date`), `exercises_solved` (integer), and `created_at` columns.
+
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
 ## Learn More

@@ -40,11 +40,17 @@ export async function GET() {
 
   if (profileResult.error) {
     console.error("Unable to load the user's profile:", profileResult.error)
-    return NextResponse.json({ error: "Unable to load profile details." }, { status: 500 })
+    return NextResponse.json(
+      { error: "Unable to load profile details.", code: profileResult.error.code },
+      { status: 500 },
+    )
   }
   if (countResult.error) {
     console.error("Unable to load anonymous problem counts:", countResult.error)
-    return NextResponse.json({ error: "Unable to load problem counts." }, { status: 500 })
+    return NextResponse.json(
+      { error: "Unable to load problem counts.", code: countResult.error.code },
+      { status: 500 },
+    )
   }
   const profile = profileResult.data
   if (!profile) {

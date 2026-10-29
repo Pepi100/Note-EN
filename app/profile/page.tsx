@@ -38,10 +38,12 @@ export default function ProfilePage() {
           exercisesSolved?: unknown
           problemCounts?: unknown
           error?: unknown
+          code?: unknown
         } = await response.json()
 
         if (!response.ok) {
-          throw new Error(typeof result.error === "string" ? result.error : "Unable to load profile.")
+          const errorCode = typeof result.code === "string" ? ` (cod ${result.code})` : ""
+          throw new Error(`Cererea profilului a eșuat${errorCode}.`)
         }
         if (typeof result.exercisesSolved !== "number" || !Number.isSafeInteger(result.exercisesSolved) || result.exercisesSolved < 0) {
           throw new Error("The profile contains an invalid solved-problem count.")
@@ -67,7 +69,9 @@ export default function ProfilePage() {
       } catch (error) {
         if (controller.signal.aborted) return
         console.error("Unable to load profile details and problem counts:", error)
-        setProfileError("Datele profilului nu au putut fi încărcate.")
+        setProfileError(error instanceof Error
+          ? `Datele profilului nu au putut fi încărcate. ${error.message}`
+          : "Datele profilului nu au putut fi încărcate.")
       } finally {
         if (!controller.signal.aborted) setProfileLoading(false)
       }
@@ -153,7 +157,6 @@ export default function ProfilePage() {
       <Card>
         <CardHeader>
           <CardTitle>Profilul meu</CardTitle>
-          <CardDescription>Detaliile contului tău autentificat.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="flex items-center gap-3">
@@ -259,9 +262,6 @@ export default function ProfilePage() {
       <Card>
         <CardHeader>
           <CardTitle>Probleme rezolvate de utilizatori</CardTitle>
-          <CardDescription>
-            Numărul de probleme rezolvate, afișat anonim. Datele personale nu sunt incluse.
-          </CardDescription>
         </CardHeader>
         <CardContent>
           {profileLoading ? (

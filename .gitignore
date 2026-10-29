@@ -44,3 +44,5 @@ next-env.d.ts
 
 # SQL
 /supabase/*.sql
+!/supabase/profile-read.sql
+!/supabase/profile-signup.sql

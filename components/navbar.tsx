@@ -7,12 +7,12 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Button } from "@/components/ui/button"
 import { ChevronDown, Moon, Sun, UserRound } from "lucide-react"
 import { useTheme } from "next-themes" // Import useTheme
-import { useDemoAuth } from "@/components/auth-provider"
+import { useAuth } from "@/components/auth-provider"
 
 export function Navbar() {
   const pathname = usePathname()
   const { theme, setTheme } = useTheme() // Initialize useTheme
-  const { user } = useDemoAuth()
+  const { user, loading } = useAuth()
   const isHome = pathname === "/"
   const isPreparationPage = pathname === "/pregatire"
   const isResultsSection = pathname.startsWith("/rezultate")
@@ -134,9 +134,21 @@ export function Navbar() {
               <span className="sr-only">Toggle theme</span>
             </Button>
             <Button asChild variant="ghost" size="icon">
-              <Link href="/login" aria-label={user ? `Cont: ${user.name}` : "Autentificare"}>
+              <Link
+                href={user ? "/profile" : "/login"}
+                aria-label={user ? `Profil autentificat: ${user.email ?? "utilizator"}` : "Autentificare"}
+                aria-busy={loading}
+                title={user ? "Profil (autentificat)" : "Autentificare"}
+                className="relative"
+              >
                 <UserRound className="h-[1.2rem] w-[1.2rem]" />
-                <span className="sr-only">{user ? `Cont: ${user.name}` : "Autentificare"}</span>
+                {user && (
+                  <span
+                    aria-hidden="true"
+                    className="absolute right-1 top-1 h-2.5 w-2.5 rounded-full border-2 border-background bg-green-500"
+                  />
+                )}
+                <span className="sr-only">{user ? `Profil autentificat: ${user.email ?? "utilizator"}` : "Autentificare"}</span>
               </Link>
             </Button>
           </div>

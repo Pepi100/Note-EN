@@ -16,7 +16,7 @@ export function Navbar() {
   const { user, loading } = useAuth()
   const [isAdmin, setIsAdmin] = useState(false)
   const isHome = pathname === "/"
-  const isPreparationPage = pathname === "/pregatire"
+  const isPreparationSection = pathname.startsWith("/pregatire")
   const isResultsSection = pathname.startsWith("/rezultate")
 
   useEffect(() => {
@@ -68,7 +68,7 @@ export function Navbar() {
       <div className="container mx-auto px-4">
         <div className="flex h-16 items-center justify-between">
           <div className="flex items-center space-x-4">
-            {!isPreparationPage && (
+            {!isPreparationSection && (
               <Link href="/" className="text-xl font-bold">
                 Educație.ro
               </Link>
@@ -91,6 +91,29 @@ export function Navbar() {
               <Link href="/pregatire" className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">
                 Pregătire
               </Link>
+            )}
+
+            {isPreparationSection && (
+              <>
+                <Link
+                  href="/pregatire"
+                  className={cn(
+                    "text-sm font-medium transition-colors hover:text-primary",
+                    pathname === "/pregatire" ? "text-primary" : "text-muted-foreground",
+                  )}
+                >
+                  Pregătire
+                </Link>
+                <Link
+                  href="/pregatire/exercitii"
+                  className={cn(
+                    "text-sm font-medium transition-colors hover:text-primary",
+                    pathname.startsWith("/pregatire/exercitii") ? "text-primary" : "text-muted-foreground",
+                  )}
+                >
+                  Exerciții
+                </Link>
+              </>
             )}
 
             {isResultsSection && (

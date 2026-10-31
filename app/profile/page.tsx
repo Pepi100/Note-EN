@@ -1,11 +1,38 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/components/auth-provider"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+
+interface RecentlySolvedExercise {
+  id: string
+  exerciseNumber: number
+  topic: string
+  grade: number
+  chapter: string
+  solvedAt: string | null
+}
+
+function isRecentlySolvedExercise(value: unknown): value is RecentlySolvedExercise {
+  if (typeof value !== "object" || value === null) return false
+  return "id" in value
+    && typeof value.id === "string"
+    && "exerciseNumber" in value
+    && typeof value.exerciseNumber === "number"
+    && Number.isSafeInteger(value.exerciseNumber)
+    && "topic" in value
+    && typeof value.topic === "string"
+    && "grade" in value
+    && typeof value.grade === "number"
+    && "chapter" in value
+    && typeof value.chapter === "string"
+    && "solvedAt" in value
+    && (value.solvedAt === null || typeof value.solvedAt === "string")
+}
 
 export default function ProfilePage() {
   const router = useRouter()
@@ -13,7 +40,7 @@ export default function ProfilePage() {
   const [error, setError] = useState<string | null>(null)
   const [signingOut, setSigningOut] = useState(false)
   const [exercisesSolved, setExercisesSolved] = useState<number | null>(null)
-  const [problemCounts, setProblemCounts] = useState<number[]>([])
+  const [recentSolved, setRecentSolved] = useState<RecentlySolvedExercise[]>([])
   const [name, setName] = useState("")
   const [dateOfBirth, setDateOfBirth] = useState("")
   const [savingProfile, setSavingProfile] = useState(false)
@@ -36,7 +63,7 @@ export default function ProfilePage() {
           name?: unknown
           dateOfBirth?: unknown
           exercisesSolved?: unknown
-          problemCounts?: unknown
+          recentSolved?: unknown
           error?: unknown
           code?: unknown
         } = await response.json()
@@ -54,10 +81,8 @@ export default function ProfilePage() {
             typeof result.dateOfBirth !== "string"
             || !/^\d{4}-\d{2}-\d{2}$/.test(result.dateOfBirth)
           ))
-          || !Array.isArray(result.problemCounts)
-          || result.problemCounts.some((count) => (
-            typeof count !== "number" || !Number.isSafeInteger(count) || count < 0
-          ))
+          || !Array.isArray(result.recentSolved)
+          || !result.recentSolved.every(isRecentlySolvedExercise)
         ) {
           throw new Error("The profile response contains invalid data.")
         }
@@ -65,10 +90,10 @@ export default function ProfilePage() {
         setName(result.name)
         setExercisesSolved(result.exercisesSolved)
         setDateOfBirth(typeof result.dateOfBirth === "string" ? result.dateOfBirth : "")
-        setProblemCounts(result.problemCounts)
+        setRecentSolved(result.recentSolved)
       } catch (error) {
         if (controller.signal.aborted) return
-        console.error("Unable to load profile details and problem counts:", error)
+        console.error("Unable to load profile details and recent solved exercises:", error)
         setProfileError(error instanceof Error
           ? `Datele profilului nu au putut fi încărcate. ${error.message}`
           : "Datele profilului nu au putut fi încărcate.")
@@ -261,25 +286,38 @@ export default function ProfilePage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Probleme rezolvate de utilizatori</CardTitle>
+          <CardTitle>Ultimele 25 de exerciții rezolvate de mine</CardTitle>
         </CardHeader>
         <CardContent>
           {profileLoading ? (
-            <p className="text-sm text-muted-foreground">Se încarcă statisticile...</p>
-          ) : problemCounts.length > 0 ? (
-            <ul className="grid gap-2 sm:grid-cols-2">
-              {problemCounts.map((count, index) => (
-                <li
-                  key={index}
-                  className="flex items-center justify-between rounded-md bg-muted px-3 py-2 text-sm"
-                >
-                  <span>Utilizator {index + 1}</span>
-                  <span className="font-medium">{count}</span>
+            <p className="text-sm text-muted-foreground">Se încarcă exercițiile...</p>
+          ) : recentSolved.length > 0 ? (
+            <ul className="space-y-2">
+              {recentSolved.map((exercise) => (
+                <li key={exercise.id}>
+                  <Link
+                    href={`/pregatire/exercitii/${encodeURIComponent(exercise.id)}`}
+                    className="flex flex-col gap-1 rounded-md bg-muted px-3 py-2 text-sm transition-colors hover:bg-muted/70 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <span className="font-medium">
+                      Exercițiul #{exercise.exerciseNumber}
+                      <span className="font-normal text-muted-foreground">
+                        {" "}· Clasa {exercise.grade} · {exercise.topic} · {exercise.chapter}
+                      </span>
+                    </span>
+                    <time className="text-muted-foreground">
+                      {exercise.solvedAt
+                        ? new Date(exercise.solvedAt).toLocaleString("ro-RO")
+                        : "Data indisponibilă"}
+                    </time>
+                  </Link>
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="text-sm text-muted-foreground">Nu există statistici disponibile.</p>
+            <p className="text-sm text-muted-foreground">
+              Încă nu ai rezolvat niciun exercițiu.
+            </p>
           )}
         </CardContent>
       </Card>

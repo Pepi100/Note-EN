@@ -1,20 +1,8 @@
 import { createClient } from "@/lib/supabase/server"
-
-export interface Exercise {
-  id: string
-  topic: string
-  chapter: string
-  grade: number
-  origin: string
-  prompt_text: string
-  additional_text: string | null
-  image_url: string | null
-  answer_type: string
-  options: unknown
-}
+import type { Exercise } from "@/lib/exercise-utils"
 
 const exerciseColumns =
-  "id, topic, chapter, grade, origin, prompt_text, additional_text, image_url, answer_type, options"
+  "id, exercise_number, topic, chapter, grade, origin, prompt_text, additional_text, image_url, answer_type, options"
 const exercisePageSize = 500
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -26,6 +14,7 @@ function parseExercise(value: unknown): Exercise | null {
 
   const {
     id,
+    exercise_number,
     topic,
     chapter,
     grade,
@@ -39,6 +28,9 @@ function parseExercise(value: unknown): Exercise | null {
 
   if (
     typeof id !== "string"
+    || typeof exercise_number !== "number"
+    || !Number.isSafeInteger(exercise_number)
+    || exercise_number < 1
     || typeof topic !== "string"
     || typeof chapter !== "string"
     || typeof grade !== "number"
@@ -54,6 +46,7 @@ function parseExercise(value: unknown): Exercise | null {
 
   return {
     id,
+    exercise_number,
     topic,
     chapter,
     grade,
@@ -157,7 +150,7 @@ export async function getExercises() {
 export async function getExercise(id: string) {
   const supabase = createClient()
   const { error: authError, userId } = await getCurrentUserId(supabase)
-  if (authError) return { error: authError, exercise: null, solved: false }
+  if (authError) return { error: authError, exercise: null, solved: false, userId: null }
 
   const { data, error } = await supabase
     .from("exercises")
@@ -167,21 +160,21 @@ export async function getExercise(id: string) {
 
   if (error) {
     console.error("Unable to load exercise details:", error)
-    return { error: "Exercițiul nu a putut fi încărcat.", exercise: null, solved: false }
+    return { error: "Exercițiul nu a putut fi încărcat.", exercise: null, solved: false, userId }
   }
 
-  if (!data) return { error: null, exercise: null, solved: false }
+  if (!data) return { error: null, exercise: null, solved: false, userId }
 
   const exercise = parseExercise(data)
   if (!exercise) {
     console.error("The exercise detail row has an invalid shape.")
-    return { error: "Datele exercițiului sunt invalide.", exercise: null, solved: false }
+    return { error: "Datele exercițiului sunt invalide.", exercise: null, solved: false, userId }
   }
 
   const progress = await getSolvedExerciseIds(userId, [exercise.id])
   if (progress.error) {
-    return { error: progress.error, exercise: null, solved: false }
+    return { error: progress.error, exercise: null, solved: false, userId }
   }
 
-  return { error: null, exercise, solved: progress.solvedIds.has(exercise.id) }
+  return { error: null, exercise, solved: progress.solvedIds.has(exercise.id), userId }
 }

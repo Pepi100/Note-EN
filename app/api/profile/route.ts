@@ -34,8 +34,12 @@ export async function GET() {
       .eq("id", user.id)
       .maybeSingle(),
     supabase
-      .from("profile_problem_counts")
-      .select("exercises_solved"),
+      .from("user_exercise_progress")
+      .select("exercise_id, solved_at")
+      .eq("user_id", user.id)
+      .eq("status", "solved")
+      .order("solved_at", { ascending: false, nullsFirst: false })
+      .limit(25),
   ])
 
   if (profileResult.error) {
@@ -46,9 +50,9 @@ export async function GET() {
     )
   }
   if (countResult.error) {
-    console.error("Unable to load anonymous problem counts:", countResult.error)
+    console.error("Unable to load the user's recently solved exercises:", countResult.error)
     return NextResponse.json(
-      { error: "Unable to load problem counts.", code: countResult.error.code },
+      { error: "Unable to load recent solved exercises.", code: countResult.error.code },
       { status: 500 },
     )
   }
@@ -69,13 +73,38 @@ export async function GET() {
     return NextResponse.json({ error: "Profile details are invalid." }, { status: 500 })
   }
 
-  const problemCounts = countResult.data.map(({ exercises_solved }) => exercises_solved)
-  if (problemCounts.some((count) => (
-    typeof count !== "number" || !Number.isSafeInteger(count) || count < 0
-  ))) {
-    console.error("A profile contains an invalid solved-problem count.")
-    return NextResponse.json({ error: "Problem counts are invalid." }, { status: 500 })
+  const recentProgress = countResult.data
+  const exerciseIds = recentProgress.map(({ exercise_id }) => exercise_id)
+  const exercisesResult = exerciseIds.length > 0
+    ? await supabase
+      .from("exercises")
+      .select("id, exercise_number, topic, grade, chapter")
+      .in("id", exerciseIds)
+    : { data: [], error: null }
+
+  if (exercisesResult.error) {
+    console.error("Unable to load details for the user's recently solved exercises:", exercisesResult.error)
+    return NextResponse.json(
+      { error: "Unable to load recent solved exercise details.", code: exercisesResult.error.code },
+      { status: 500 },
+    )
   }
+
+  const exerciseById = new Map(
+    exercisesResult.data.map((exercise) => [exercise.id, exercise]),
+  )
+  const recentSolved = recentProgress.flatMap((progress) => {
+    const exercise = exerciseById.get(progress.exercise_id)
+    if (!exercise) return []
+    return [{
+      id: exercise.id,
+      exerciseNumber: exercise.exercise_number,
+      topic: exercise.topic,
+      grade: exercise.grade,
+      chapter: exercise.chapter,
+      solvedAt: progress.solved_at,
+    }]
+  })
 
   return NextResponse.json({
     name: (typeof profile.name === "string" ? profile.name.trim() : "")
@@ -83,7 +112,7 @@ export async function GET() {
       || (typeof user.user_metadata?.name === "string" ? user.user_metadata.name : ""),
     dateOfBirth: profile.date_of_birth ?? "",
     exercisesSolved: profile.exercises_solved,
-    problemCounts,
+    recentSolved,
   })
 }
 

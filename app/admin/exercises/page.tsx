@@ -150,10 +150,20 @@ export default function AdminExercisesPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="answer_type">Tipul răspunsului *</Label>
-                <Input id="answer_type" name="answer_type" maxLength={60} placeholder="ex. multiple_choice" required />
+                <select
+                  id="answer_type"
+                  name="answer_type"
+                  defaultValue="multiple_choice"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  required
+                >
+                  <option value="multiple_choice">Grilă</option>
+                  <option value="numeric">Numeric</option>
+                  <option value="text">Text</option>
+                </select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="correct_answer">Răspuns corect *</Label>
+                <Label htmlFor="correct_answer">Răspuns corect (litera opțiunii pentru Grilă) *</Label>
                 <Input id="correct_answer" name="correct_answer" maxLength={1000} required />
               </div>
             </div>
@@ -184,7 +194,8 @@ export default function AdminExercisesPage() {
                 onChange={(event) => setOptionsText(event.target.value)}
               />
               <p className="text-sm text-muted-foreground">
-                Pentru tipurile cu variante, introdu o listă JSON, de exemplu ["A", "B", "C"].
+                Pentru Grilă, introdu exact patru opțiuni JSON cu etichetă și text, de exemplu{" "}
+                <code>{'[{"label":"a","text":"Varianta A"}]'}</code>.
               </p>
             </div>
 

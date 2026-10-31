@@ -1,6 +1,7 @@
 import type React from "react"
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
+import "katex/dist/katex.min.css"
 import "./globals.css"
 import { Navbar } from "@/components/navbar"
 import { ThemeProvider } from "@/components/theme-provider" // Import ThemeProvider

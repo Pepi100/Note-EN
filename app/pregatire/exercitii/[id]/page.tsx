@@ -5,7 +5,10 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { ExerciseAnswerForm } from "@/components/exercise-answer-form"
+import { MathText } from "@/components/math-text"
 import { getExercise } from "@/lib/exercises"
+import { getAnswerTypeLabel, parseExerciseOptions } from "@/lib/exercise-utils"
 
 export default async function ExerciseDetailPage({ params }: { params: { id: string } }) {
   const result = await getExercise(params.id)
@@ -25,7 +28,10 @@ export default async function ExerciseDetailPage({ params }: { params: { id: str
 
   if (!result.exercise) notFound()
 
-  const { exercise, solved } = result
+  const { exercise, solved, userId } = result
+  const options = exercise.answer_type === "multiple_choice"
+    ? parseExerciseOptions(exercise.options)
+    : []
 
   return (
     <section className="mx-auto max-w-3xl space-y-5">
@@ -40,8 +46,9 @@ export default async function ExerciseDetailPage({ params }: { params: { id: str
         <CardHeader className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap gap-2">
-              <Badge variant="outline">{exercise.topic}</Badge>
+              <Badge variant="outline">Exercițiul #{exercise.exercise_number}</Badge>
               <Badge variant="outline">Clasa {exercise.grade}</Badge>
+              <Badge variant="outline">{exercise.topic}</Badge>
               <Badge variant="outline">{exercise.chapter}</Badge>
             </div>
             <Badge variant={solved ? "default" : "secondary"} className="gap-1.5">
@@ -51,15 +58,17 @@ export default async function ExerciseDetailPage({ params }: { params: { id: str
               {solved ? "Rezolvat" : "Nerezolvat"}
             </Badge>
           </div>
-          <CardTitle>Exercițiu</CardTitle>
+          <CardTitle>Exercițiul #{exercise.exercise_number}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-5">
           {exercise.additional_text && (
-            <p className="whitespace-pre-wrap text-sm leading-6 text-muted-foreground">
+            <MathText className="block whitespace-pre-wrap text-sm leading-6 text-muted-foreground">
               {exercise.additional_text}
-            </p>
+            </MathText>
           )}
-          <p className="whitespace-pre-wrap leading-7">{exercise.prompt_text}</p>
+          <MathText className="block whitespace-pre-wrap leading-7">
+            {exercise.prompt_text}
+          </MathText>
           {exercise.image_url && (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -68,20 +77,17 @@ export default async function ExerciseDetailPage({ params }: { params: { id: str
               className="h-auto max-h-[28rem] max-w-full rounded-md border object-contain"
             />
           )}
-          {Array.isArray(exercise.options) && exercise.options.length > 0 && (
-            <ul className="space-y-2">
-              {exercise.options.map((option, index) => (
-                <li key={index} className="rounded-md border bg-muted/40 px-4 py-3 text-sm">
-                  {typeof option === "string" || typeof option === "number"
-                    ? option
-                    : `Varianta ${index + 1}`}
-                </li>
-              ))}
-            </ul>
-          )}
+          <ExerciseAnswerForm
+            exerciseId={exercise.id}
+            answerType={exercise.answer_type}
+            options={options ?? []}
+            optionsValid={exercise.answer_type !== "multiple_choice" || options?.length === 4}
+            initiallySolved={solved}
+            canAnswer={Boolean(userId)}
+          />
           <div className="flex flex-wrap gap-2 border-t pt-4">
             <Badge variant="secondary">{exercise.origin}</Badge>
-            <Badge variant="secondary">{exercise.answer_type}</Badge>
+            <Badge variant="secondary">{getAnswerTypeLabel(exercise.answer_type)}</Badge>
           </div>
         </CardContent>
       </Card>

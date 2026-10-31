@@ -20,6 +20,22 @@ function optionalText(value: unknown, maxLength: number): string | null | undefi
   return text.length <= maxLength ? text || null : undefined
 }
 
+function isValidMultipleChoice(options: unknown, correctAnswer: string): boolean {
+  if (!Array.isArray(options) || options.length !== 4) return false
+
+  const validAnswers = options.map((option) => {
+    if (typeof option === "string" || typeof option === "number") return String(option).trim()
+    if (!isRecord(option)) return null
+    const record = option
+    if (typeof record.label === "string" && record.label.trim()) return record.label.trim()
+    if (typeof record.text === "string" || typeof record.text === "number") return String(record.text).trim()
+    return null
+  })
+
+  return validAnswers.every((answer) => answer !== null)
+    && validAnswers.some((answer) => answer?.toLocaleLowerCase() === correctAnswer.toLocaleLowerCase())
+}
+
 async function authorizeAdmin() {
   const supabase = createClient()
   const {
@@ -93,6 +109,7 @@ export async function POST(request: Request) {
     || !origin
     || !promptText
     || !answerType
+    || !["multiple_choice", "numeric", "text"].includes(answerType)
     || !correctAnswer
     || additionalText === undefined
     || imageUrl === undefined
@@ -120,6 +137,13 @@ export async function POST(request: Request) {
     if (optionsLength > 10000) {
       return NextResponse.json({ error: "Options must be 10,000 characters or fewer." }, { status: 400 })
     }
+  }
+
+  if (answerType === "multiple_choice" && !isValidMultipleChoice(body.options, correctAnswer)) {
+    return NextResponse.json(
+      { error: "Grilă trebuie să conțină exact patru opțiuni, iar răspunsul corect trebuie să fie una dintre etichete." },
+      { status: 400 },
+    )
   }
 
   const { error } = await authorization.supabase.from("exercises").insert({

@@ -47,3 +47,4 @@ next-env.d.ts
 !/supabase/admin-exercises.sql
 !/supabase/profile-read.sql
 !/supabase/profile-signup.sql
+!/supabase/submit-exercise.sql

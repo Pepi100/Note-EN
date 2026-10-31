@@ -6,7 +6,9 @@ import { CheckCircle2, Circle, SlidersHorizontal } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import type { Exercise } from "@/lib/exercises"
+import { MathText } from "@/components/math-text"
+import type { Exercise } from "@/lib/exercise-utils"
+import { getAnswerTypeLabel } from "@/lib/exercise-utils"
 
 interface ExerciseListProps {
   exercises: Exercise[]
@@ -23,7 +25,7 @@ function FilterSelect({
 }: {
   label: string
   value: string
-  options: string[]
+  options: Array<string | { value: string; label: string }>
   onChange: (value: string) => void
 }) {
   const id = `exercise-filter-${label.toLowerCase().replaceAll(" ", "-")}`
@@ -38,9 +40,12 @@ function FilterSelect({
         className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
       >
         <option value="">Toate</option>
-        {options.map((option) => (
-          <option key={option} value={option}>{option}</option>
-        ))}
+        {options.map((option) => {
+          const item = typeof option === "string"
+            ? { value: option, label: option }
+            : option
+          return <option key={item.value} value={item.value}>{item.label}</option>
+        })}
       </select>
     </div>
   )
@@ -63,7 +68,9 @@ export function ExerciseList({ exercises, solvedIds }: ExerciseListProps) {
   const chapters = useMemo(() => [...new Set(exercises.map(({ chapter }) => chapter))].sort(), [exercises])
   const origins = useMemo(() => [...new Set(exercises.map(({ origin }) => origin))].sort(), [exercises])
   const answerTypes = useMemo(
-    () => [...new Set(exercises.map(({ answer_type }) => answer_type))].sort(),
+    () => [...new Set(exercises.map(({ answer_type }) => answer_type))]
+      .sort()
+      .map((answerType) => ({ value: answerType, label: getAnswerTypeLabel(answerType) })),
     [exercises],
   )
 
@@ -164,9 +171,10 @@ export function ExerciseList({ exercises, solvedIds }: ExerciseListProps) {
                   <CardContent className="space-y-4 p-5">
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div className="space-y-1">
-                        <h2 className="font-semibold">{exercise.topic}</h2>
+                        <h2 className="font-semibold">Exercițiul #{exercise.exercise_number}</h2>
                         <p className="text-sm text-muted-foreground">
-                          Clasa {exercise.grade} <span aria-hidden="true">·</span> {exercise.chapter}
+                          Clasa {exercise.grade} <span aria-hidden="true">·</span> {exercise.topic}
+                          <span aria-hidden="true"> · </span>{exercise.chapter}
                         </p>
                       </div>
                       <Badge variant={isSolved ? "default" : "secondary"} className="gap-1.5">
@@ -177,13 +185,13 @@ export function ExerciseList({ exercises, solvedIds }: ExerciseListProps) {
                       </Badge>
                     </div>
 
-                    <p className="line-clamp-3 whitespace-pre-wrap text-sm leading-6">
+                    <MathText className="line-clamp-3 whitespace-pre-wrap text-sm leading-6">
                       {exercise.prompt_text}
-                    </p>
+                    </MathText>
 
                     <div className="flex flex-wrap gap-2">
                       <Badge variant="outline">{exercise.origin}</Badge>
-                      <Badge variant="outline">{exercise.answer_type}</Badge>
+                      <Badge variant="outline">{getAnswerTypeLabel(exercise.answer_type)}</Badge>
                     </div>
                   </CardContent>
                 </Card>

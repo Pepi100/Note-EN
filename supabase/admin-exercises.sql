@@ -1,5 +1,21 @@
 alter table public.exercises enable row level security;
 
+revoke select on table public.exercises from public, anon, authenticated;
+revoke select (correct_answer) on table public.exercises from public, anon, authenticated;
+grant select (
+  id,
+  topic,
+  chapter,
+  grade,
+  origin,
+  prompt_text,
+  additional_text,
+  image_url,
+  answer_type,
+  options,
+  created_at
+) on table public.exercises to anon, authenticated;
+
 revoke insert on table public.exercises from public, anon, authenticated;
 revoke insert (
   topic,
@@ -25,6 +41,13 @@ grant insert (
   options,
   correct_answer
 ) on table public.exercises to authenticated;
+
+drop policy if exists exercises_public_read on public.exercises;
+create policy exercises_public_read
+on public.exercises
+for select
+to anon, authenticated
+using (true);
 
 drop policy if exists exercises_admin_insert on public.exercises;
 create policy exercises_admin_insert

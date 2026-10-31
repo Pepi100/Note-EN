@@ -322,9 +322,9 @@ def fix_coduri():
 
 
 def xlsx_to_final(year, p):
-    xlsx_to_csv(f"csv\{year}.xlsx",f"csv\{year}.csv")
-    clean_csv(f"csv\{year}.csv")
-    transform_exam_csv(f"csv\{year}.csv", f"public\{year}.csv", p)
+    xlsx_to_csv(rf"csv\{year}.xlsx", rf"csv\{year}.csv")
+    clean_csv(rf"csv\{year}.csv")
+    transform_exam_csv(rf"csv\{year}.csv", rf"public\statiscics\{year}.csv", p)
     print(unknown)
     print(len(unknown))
     print(f"Finished year {year}!")
@@ -335,7 +335,7 @@ def xlsx_to_final(year, p):
 year = 2025
 # xlsx_to_csv(f"csv\{year}.xlsx",f"csv\{year}.csv")
 # clean_csv(f"csv\{year}.csv")
-transform_exam_csv(f"csv\{year}.csv", f"public\{year}.csv", 0)
+transform_exam_csv(rf"csv\{year}.csv", rf"public\statiscics\{year}.csv", 0)
 
 # print(unknown)
 # print(len(unknown))
@@ -378,4 +378,4 @@ def transform_csv(input_path, output_path):
 
 # # Usage:
 # year = 2025
-# transform_csv(f"csv\{year}.csv", f"public\{year}.csv")
+# transform_csv(rf"csv\{year}.csv", rf"public\statiscics\{year}.csv")

@@ -125,7 +125,7 @@ export interface SchoolStats {
  * @function parseCSV
  * @description Parsează un fișier CSV de la o cale dată și returnează un array de obiecte StudentData.
  *              Gestionează încărcarea fișierului, parsarea cu PapaParse și transformarea tipurilor de date.
- * @param {string} filePath - Calea către fișierul CSV (ex: '/2023.csv').
+ * @param {string} filePath - Calea către fișierul CSV (ex: '/statiscics/2023.csv').
  * @returns {Promise<StudentData[]>} - O promisiune care se rezolvă cu un array de obiecte StudentData.
  * @throws {Error} - Aruncă o eroare dacă fișierul nu poate fi încărcat sau parsarea eșuează.
  *
@@ -885,7 +885,7 @@ export function calculateSchoolStats(data: StudentData[], schoolName: string, ye
  */
 export async function parseSchoolsCSV(): Promise<SchoolInfo[]> {
   try {
-    const fullPath = getAssetPath("/scoli.csv") // Schimbat calea aici
+    const fullPath = getAssetPath("/statiscics/scoli.csv")
     console.log(`Attempting to fetch schools: ${fullPath}`)
 
     const response = await fetch(fullPath, {

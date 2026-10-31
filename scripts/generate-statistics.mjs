@@ -4,15 +4,16 @@ import path from "node:path"
 import Papa from "papaparse"
 
 const publicDirectory = path.join(process.cwd(), "public")
+const statisticsDirectory = path.join(publicDirectory, "statiscics")
 const generatedDirectory = path.join(publicDirectory, "generated")
 const yearsDirectory = path.join(generatedDirectory, "years")
-const years = (await readdir(publicDirectory))
+const years = (await readdir(statisticsDirectory))
   .map((fileName) => fileName.match(/^(\d{4})\.csv$/)?.[1])
   .filter(Boolean)
   .sort()
 
 if (years.length === 0) {
-  throw new Error(`No annual CSV files found in ${publicDirectory}`)
+  throw new Error(`No annual CSV files found in ${statisticsDirectory}`)
 }
 
 await mkdir(yearsDirectory, { recursive: true })
@@ -247,7 +248,7 @@ function parseStudentCsv(filePath, onRow) {
 }
 
 for (const year of years) {
-  const filePath = path.join(publicDirectory, `${year}.csv`)
+  const filePath = path.join(statisticsDirectory, `${year}.csv`)
   const allStudents = createAccumulator()
   const countyAccumulators = new Map()
   const yearCounties = new Set()
@@ -297,7 +298,7 @@ for (const year of years) {
   console.log(`Generated ${year}: ${allStudents.totalStudents.toLocaleString()} students`)
 }
 
-const schoolFile = path.join(publicDirectory, "scoli.csv")
+const schoolFile = path.join(statisticsDirectory, "scoli.csv")
 const schools = []
 await new Promise((resolve, reject) => {
   Papa.parse(createReadStream(schoolFile), {

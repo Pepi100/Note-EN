@@ -7,7 +7,10 @@ from bs4 import BeautifulSoup
 import time
 import pandas as pd
 from webdriver_manager.chrome import ChromeDriverManager
-import os
+from pathlib import Path
+
+statistics_directory = Path(__file__).resolve().parent.parent / "public" / "statiscics"
+statistics_directory.mkdir(parents=True, exist_ok=True)
 
 column_names = [
     "ID_candidat", "Scoala", "Nota_ro", "Contestatie_ro", "Nota_finala_ro",
@@ -94,8 +97,9 @@ def get_data(year):
     df = pd.DataFrame()
     judete = []
 
-    if os.path.exists(f"{year}.csv"):
-        df = pd.read_csv(f"{year}.csv")
+    output_path = statistics_directory / f"{year}.csv"
+    if output_path.exists():
+        df = pd.read_csv(output_path)
         judete = set(df["Judet"])
     
     # print(judete)
@@ -112,9 +116,9 @@ def get_data(year):
         print(f"Sector: {sector:>2} | New size: {df.shape[0]:>6} | Elapsed: {time.time() - start_time:7.1f}s  | Sector: {time.time() - sector_time:6.1f}s")
 
         # Save to CSV
-        df.to_csv(f"{year}.csv", index=False)
+        df.to_csv(output_path, index=False)
 
-    print(f"Scraped {len(df)} records. Data saved to {year}.csv")
+    print(f"Scraped {len(df)} records. Data saved to {output_path}")
 
     # # Display first few rows
     # print(df.head())

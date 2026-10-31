@@ -81,7 +81,7 @@ export default function GasesteLoculPage() {
     ) / 100
     setSearching(true)
     try {
-      const positions = await findStudentRank(`/${selectedYear}.csv`, selectedCounty, averageGrade)
+      const positions = await findStudentRank(`/statiscics/${selectedYear}.csv`, selectedCounty, averageGrade)
       setRank({ ...positions, finalGrade: averageGrade })
     } catch (error) {
       console.error(`Unable to find rank for ${selectedCounty} in ${selectedYear}:`, error)

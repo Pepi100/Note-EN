@@ -17,6 +17,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { removeRomanianDiacritics } from "@/lib/utils"
 import { fetchGeneratedData, type GeneratedDataIndex, type SchoolDirectoryEntry } from "@/lib/generated-data"
 
+//te youbesc
 export default function CautaScoalaPage() {
   const [allSchools, setAllSchools] = useState<SchoolDirectoryEntry[]>([])
   const [counties, setCounties] = useState<string[]>([])
@@ -101,7 +102,7 @@ export default function CautaScoalaPage() {
       setSchoolStatsError(null)
       setLoadingSchoolStats(true)
       try {
-        const students = await parseStudentsForSchool(`/${selectedYear}.csv`, selectedSchool.Cod)
+        const students = await parseStudentsForSchool(`/statiscics/${selectedYear}.csv`, selectedSchool.Cod)
         if (!cancelled) {
           setSchoolStats(calculateSchoolStats(students, selectedSchool.Denumire, selectedYear))
         }

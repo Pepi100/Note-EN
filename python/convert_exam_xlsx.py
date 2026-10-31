@@ -262,10 +262,11 @@ def main() -> None:
 
     project_root = Path(__file__).resolve().parent.parent
     public_directory = project_root / "public"
+    statistics_directory = public_directory / "statiscics"
     convert_workbook(
         public_directory / f"{args.year}.xlsx",
-        public_directory / f"{args.year}.csv",
-        public_directory / "scoli.csv",
+        statistics_directory / f"{args.year}.csv",
+        statistics_directory / "scoli.csv",
     )
 
 

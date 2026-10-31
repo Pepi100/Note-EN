@@ -20,9 +20,9 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 ## Exam data
 
-Annual CSV files in `public/` are processed into compact summaries before development and production builds. The overview, year detail, school directory, and county list load these generated files instead of parsing all student CSVs in the browser. The school lookup fetches and parses a year's CSV only after a school and year are selected, retaining only that school's records in browser memory. This supports static hosting such as GitHub Pages; the source CSVs remain publicly accessible.
+Annual CSV files in `public/statiscics/` are processed into compact summaries before development and production builds. The overview, year detail, school directory, and county list load these generated files instead of parsing all student CSVs in the browser. The school lookup fetches and parses a year's CSV only after a school and year are selected, retaining only that school's records in browser memory. This supports static hosting such as GitHub Pages; the source CSVs remain publicly accessible.
 
-To convert an official exam workbook, place `YYYY.xlsx` in `public/` and run `python python/convert_exam_xlsx.py YYYY`. Then run the usual development or build command. The statistics generator discovers annual CSV files automatically. Keep `scoli.csv` in `public/` so the school directory and county mappings can be regenerated.
+To convert an official exam workbook, place `YYYY.xlsx` in `public/` and run `python python/convert_exam_xlsx.py YYYY`. The output CSV and `scoli.csv` must be in `public/statiscics/`. Then run the usual development or build command. The statistics generator discovers annual CSV files automatically.
 
 ## Authentication setup
 
